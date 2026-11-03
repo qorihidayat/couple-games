@@ -1,0 +1,60 @@
+{
+  "soft": {
+    "truth": [
+      "Apa hal kecil yang paling kamu sukai dari pasanganmu?",
+      "Kapan pertama kali kamu sadar suka sama dia?",
+      "Apa makanan favorit pasanganmu?",
+      "Lagu apa yang mengingatkanmu pada hubungan ini?",
+      "Apa kebiasaan lucu pasanganmu yang kamu suka?",
+      "Kalau bisa liburan berdua sekarang, mau ke mana?",
+      "Apa pujian yang paling kamu ingat dari pasanganmu?",
+      "Hal apa yang bikin kamu merasa aman sama dia?"
+    ],
+    "dare": [
+      "Kirim pesan manis ke pasanganmu sekarang dan bacakan.",
+      "Tunjukkan 3 foto favorit kalian berdua dan ceritakan kenapa.",
+      "Buat pujian spontan selama 20 detik tanpa berhenti.",
+      "Tari lagu favorit pasanganmu selama 15 detik.",
+      "Tirukan cara pasanganmu bilang 'aku sayang kamu'.",
+      "Ambil foto bareng dengan pose paling bucin (selfie).",
+      "Ceritakan momen paling gemes yang pernah terjadi."
+    ]
+  },
+  "medium": {
+    "truth": [
+      "Apa yang paling kamu takuti soal hubungan ini?",
+      "Pernahkah kamu cemburu? Ceritakan.",
+      "Apa yang ingin kamu ubah dari dirimu demi hubungan ini?",
+      "Kapan terakhir kali kamu merasa sangat dihargai olehnya?",
+      "Apa rahasia kecil yang belum pernah kamu ceritakan?",
+      "Kalau hubungan ini film, judulnya apa dan kenapa?",
+      "Apa yang membuatmu paling merasa dicintai?",
+      "Ada kebiasaan pasanganmu yang kadang mengganggu?"
+    ],
+    "dare": [
+      "Bilang 3 alasan kenapa kamu memilih dia, sambil menatap kamera.",
+      "Buat janji kecil yang harus ditepati dalam 24 jam.",
+      "Tulis pesan romantis dan bacakan dengan suara lembut.",
+      "Ceritakan fantasi kencan ideal kalian berdua.",
+      "Sebutkan 1 hal yang ingin kamu coba bareng tahun ini.",
+      "Pandangi kamera selama 15 detik sambil senyum tanpa ketawa."
+    ]
+  },
+  "spicy": {
+    "truth": [
+      "Apa yang paling bikin kamu terangsang dari pasanganmu?",
+      "Pernahkah kamu berfantasi tentang dia di tempat umum?",
+      "Apa hal paling berani yang ingin kamu coba bareng?",
+      "Bagian tubuh mana yang paling kamu suka dari dia?",
+      "Apa kata-kata yang paling mempan buatmu?",
+      "Apa yang ingin kamu dengar saat momen intim?"
+    ],
+    "dare": [
+      "Berbisik sesuatu yang menggoda (rekam voice note).",
+      "Deskripsikan apa yang ingin kamu lakukan padanya nanti.",
+      "Tulis 1 hal yang ingin kamu coba dan kirim sekarang.",
+      "Buat challenge 'tidak boleh bilang sayang' selama 2 menit.",
+      "Ceritakan fantasi singkat yang melibatkan dia."
+    ]
+  }
+}

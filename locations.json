@@ -1,0 +1,36 @@
+{
+  "indonesia": [
+    {"name": "Monas, Jakarta", "lat": -6.1754, "lng": 106.8272, "hint": "Monumen terkenal di ibu kota"},
+    {"name": "Candi Borobudur, Magelang", "lat": -7.6079, "lng": 110.2038, "hint": "Candi Buddha terbesar di dunia"},
+    {"name": "Pantai Kuta, Bali", "lat": -8.7183, "lng": 115.1686, "hint": "Pantai populer di pulau dewa"},
+    {"name": "Gunung Bromo, Jawa Timur", "lat": -7.9425, "lng": 112.9530, "hint": "Gunung berapi dengan lautan pasir"},
+    {"name": "Jembatan Ampera, Palembang", "lat": -2.9910, "lng": 104.7640, "hint": "Jembatan ikonik di Sumatera Selatan"},
+    {"name": "Taman Mini Indonesia Indah", "lat": -6.3024, "lng": 106.8951, "hint": "Taman budaya di Jakarta Timur"},
+    {"name": "Malioboro, Yogyakarta", "lat": -7.7926, "lng": 110.3657, "hint": "Jalan legendaris di kota gudeg"},
+    {"name": "Danau Toba, Sumatera Utara", "lat": 2.6100, "lng": 98.9000, "hint": "Danau vulkanik terbesar di Indonesia"},
+    {"name": "Raja Ampat, Papua Barat", "lat": -0.2333, "lng": 130.5167, "hint": "Surga diving di timur Indonesia"},
+    {"name": "Kawah Ijen, Banyuwangi", "lat": -8.0580, "lng": 114.2420, "hint": "Api biru dan danau asam"}
+  ],
+  "global": [
+    {"name": "Eiffel Tower, Paris", "lat": 48.8584, "lng": 2.2945, "hint": "Menara besi ikonik di Eropa"},
+    {"name": "Statue of Liberty, New York", "lat": 40.6892, "lng": -74.0445, "hint": "Patung kebebasan di pelabuhan"},
+    {"name": "Great Wall, China", "lat": 40.4319, "lng": 116.5704, "hint": "Tembok panjang di Asia Timur"},
+    {"name": "Sydney Opera House", "lat": -33.8568, "lng": 151.2153, "hint": "Gedung opera berbentuk kerang"},
+    {"name": "Machu Picchu, Peru", "lat": -13.1631, "lng": -72.5450, "hint": "Kota kuno di pegunungan Andes"},
+    {"name": "Taj Mahal, India", "lat": 27.1751, "lng": 78.0421, "hint": "Mausoleum marmer putih"},
+    {"name": "Colosseum, Rome", "lat": 41.8902, "lng": 12.4922, "hint": "Amfiteater Romawi kuno"},
+    {"name": "Mount Fuji, Japan", "lat": 35.3606, "lng": 138.7274, "hint": "Gunung suci berbentuk kerucut"},
+    {"name": "Christ the Redeemer, Rio", "lat": -22.9519, "lng": -43.2105, "hint": "Patung Yesus di atas bukit"},
+    {"name": "Pyramids of Giza, Egypt", "lat": 29.9792, "lng": 31.1342, "hint": "Piramida kuno di gurun"}
+  ],
+  "asia": [
+    {"name": "Petronas Towers, Kuala Lumpur", "lat": 3.1579, "lng": 101.7116, "hint": "Menara kembar di Malaysia"},
+    {"name": "Marina Bay Sands, Singapore", "lat": 1.2834, "lng": 103.8607, "hint": "Hotel dengan infinity pool di atap"},
+    {"name": "Angkor Wat, Cambodia", "lat": 13.4125, "lng": 103.8670, "hint": "Kompleks kuil Hindu-Buddha"},
+    {"name": "Mount Everest base (Nepal side)", "lat": 28.0026, "lng": 86.8528, "hint": "Gunung tertinggi di dunia"},
+    {"name": "Shibuya Crossing, Tokyo", "lat": 35.6595, "lng": 139.7004, "hint": "Persimpangan tersibuk di Jepang"},
+    {"name": "Forbidden City, Beijing", "lat": 39.9163, "lng": 116.3972, "hint": "Istana kaisar Tiongkok"},
+    {"name": "Ha Long Bay, Vietnam", "lat": 20.9101, "lng": 107.1839, "hint": "Teluk dengan pulau karst"},
+    {"name": "Burj Khalifa, Dubai", "lat": 25.1972, "lng": 55.2744, "hint": "Gedung tertinggi di dunia"}
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "q": "Gaya kencan ideal kalian?",
+    "opts": ["Nonton di rumah + makan enak", "Petualangan outdoor", "Cafe + jalan-jalan kota", "Surprise & spontan"]
+  },
+  {
+    "q": "Kalau lagi bertengkar, biasanya?",
+    "opts": ["Langsung ngomongin", "Butuh waktu sendiri dulu", "Pakai humor biar cair", "Tulis pesan panjang"]
+  },
+  {
+    "q": "Bahasa cinta yang paling penting?",
+    "opts": ["Waktu berkualitas", "Sentuhan fisik", "Kata-kata afirmasi", "Hadiah / perbuatan"]
+  },
+  {
+    "q": "Liburan impian berdua?",
+    "opts": ["Pantai & resort", "Gunung & alam", "Kota besar luar negeri", "Staycation di hotel bagus"]
+  },
+  {
+    "q": "Seberapa penting kesamaan hobi?",
+    "opts": ["Sangat penting", "Cukup penting", "Tidak terlalu", "Yang penting saling support"]
+  },
+  {
+    "q": "Rencana masa depan yang paling menarik?",
+    "opts": ["Nikah & keluarga", "Travel the world", "Bangun karir bareng", "Hidup tenang & stabil"]
+  },
+  {
+    "q": "Kalau salah satu lagi down, yang lain biasanya?",
+    "opts": ["Dampingi & dengerin", "Kasih solusi praktis", "Bikin dia ketawa", "Kasih ruang dulu"]
+  },
+  {
+    "q": "Yang paling bikin hubungan awet?",
+    "opts": ["Komunikasi jujur", "Kepercayaan", "Saling tumbuh", "Romance yang dijaga"]
+  }
+]

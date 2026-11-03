@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Dub Studio — 2-Player</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #1a1d27;
+      --accent: #6c5ce7;
+      --accent2: #00cec9;
+      --text: #e8eaf0;
+      --muted: #8b90a0;
+      --danger: #ff6b6b;
+      --success: #2ecc71;
+      --border: #2a2e3a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header h1 span { color: var(--accent2); }
+    .badge {
+      font-size: 0.7rem;
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 8px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      gap: 0;
+      height: calc(100vh - 56px);
+    }
+    @media (max-width: 1000px) {
+      .layout { grid-template-columns: 1fr; height: auto; }
+      .sidebar, .right-panel { max-height: 40vh; overflow: auto; }
+    }
+    .sidebar, .right-panel {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .right-panel { border-right: none; border-left: 1px solid var(--border); }
+    .main {
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+      overflow: auto;
+    }
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-secondary { background: #2a2e3a; color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #353a48; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: #0a0a0a; }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      transition: 0.2s;
+      margin-bottom: 16px;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(108, 92, 231, 0.08);
+      color: var(--text);
+    }
+    .clip-list { list-style: none; }
+    .clip-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      border: 1px solid transparent;
+    }
+    .clip-item:hover { background: #222632; }
+    .clip-item.active {
+      background: rgba(108, 92, 231, 0.15);
+      border-color: var(--accent);
+    }
+    .clip-item.has-take .status-dot { background: var(--success); }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .clip-meta { flex: 1; min-width: 0; }
+    .clip-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .clip-char { font-size: 0.7rem; color: var(--muted); }
+    .monitor {
+      background: #000;
+      border-radius: 12px;
+      aspect-ratio: 16/9;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .monitor img, .monitor video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .monitor .placeholder {
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+    }
+    .caption-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      padding: 24px 16px 12px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-shadow: 0 1px 3px black;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .waveform-box {
+      background: #12151c;
+      border-radius: 8px;
+      height: 64px;
+      position: relative;
+      overflow: hidden;
+    }
+    .waveform-box canvas { width: 100%; height: 100%; display: block; }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .player-card {
+      background: #222632;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .player-card.me { border: 1px solid var(--accent); }
+    .player-name { font-weight: 700; }
+    .player-role { font-size: 0.75rem; color: var(--muted); }
+    .room-box {
+      background: #12151c;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    input[type="text"], input[type="file"] {
+      background: #12151c;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+    input:focus { outline: 2px solid var(--accent); }
+    .hidden { display: none !important; }
+    .status-msg {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    .status-msg.ok { background: rgba(46, 204, 113, 0.15); color: var(--success); }
+    .status-msg.err { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
+    .status-msg.info { background: rgba(108, 92, 231, 0.15); color: #a29bfe; }
+    .progress-bar {
+      height: 4px;
+      background: #2a2e3a;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-bar > div {
+      height: 100%;
+      background: var(--accent2);
+      width: 0%;
+      transition: width 0.2s;
+    }
+    .char-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #353a48;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <a href="index.html" style="color:#8b90a0;text-decoration:none;font-size:0.9rem;font-weight:600;">← Dashboard</a>
+      <h1>Simple <span>Dub Studio</span> <span class="badge">2P</span></h1>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span id="packTitle" style="font-size:0.85rem;color:var(--muted);">Belum ada pack</span>
+      <button class="btn btn-secondary btn-sm" id="btnClearPack">Hapus Pack</button>
+    </div>
+  </header>
+
+
+  <div class="layout">
+    <!-- LEFT: Pack + Clip list -->
+    <aside class="sidebar">
+      <div class="section-title">Import Pack</div>
+      <div class="dropzone" id="dropzone">
+        <div style="font-size:1.8rem;margin-bottom:6px;">📦</div>
+        <div>Drop ZIP di sini<br>atau klik untuk pilih</div>
+        <input type="file" id="zipInput" accept=".zip" class="hidden" />
+      </div>
+      <div id="importStatus"></div>
+
+      <div class="section-title" style="margin-top:18px;">Clips (<span id="clipCount">0</span>)</div>
+      <ul class="clip-list" id="clipList"></ul>
+    </aside>
+
+    <!-- CENTER: Monitor + Controls -->
+    <main class="main">
+      <div class="monitor" id="monitor">
+        <div class="placeholder" id="monitorPlaceholder">
+          Import ZIP pack dulu<br>
+          <small style="opacity:0.6">Struktur: *.mp3 + *.png + *.txt + backing_track + dub_video</small>
+        </div>
+        <img id="monitorImg" class="hidden" alt="scene" />
+        <video id="monitorVideo" class="hidden" playsinline></video>
+        <div class="caption-bar hidden" id="captionBar"></div>
+      </div>
+
+      <div class="info-row">
+        <span id="currentClipLabel">—</span>
+        <span id="takeStatus">Belum ada take</span>
+      </div>
+
+      <div class="waveform-box">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-secondary" id="btnHear" disabled>▶ Dengar Original</button>
+        <button class="btn btn-primary" id="btnRecord" disabled>⏺ Rekam</button>
+        <button class="btn btn-secondary" id="btnPlayTake" disabled>▶ Play Take</button>
+        <button class="btn btn-secondary" id="btnStop" disabled>⏹ Stop</button>
+        <button class="btn btn-success" id="btnWatchDub" disabled>🎬 Watch Dub</button>
+        <button class="btn btn-secondary" id="btnExport" disabled>💾 Export Audio</button>
+      </div>
+
+      <div id="recStatus" class="status-msg info hidden"></div>
+    </main>
+
+    <!-- RIGHT: Multiplayer + Players -->
+    <aside class="right-panel">
+      <div class="section-title">Multiplayer (2 orang)</div>
+      <div class="room-box">
+        <div style="margin-bottom:8px;">
+          <label style="font-size:0.8rem;color:var(--muted);">Nama kamu</label>
+          <input type="text" id="playerName" placeholder="Misal: Qori" value="Player1" />
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button class="btn btn-primary btn-block" id="btnCreateRoom">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinRoom">Join</button>
+        </div>
+        <div id="roomInfo" class="hidden">
+          <div style="font-size:0.8rem;margin-bottom:4px;">Room Code:</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" id="roomCodeDisplay" readonly style="font-family:monospace;font-weight:700;letter-spacing:2px;" />
+            <button class="btn btn-secondary btn-sm" id="btnCopyCode">Copy</button>
+          </div>
+          <div id="roomStatus" class="status-msg info" style="margin-top:8px;">Menunggu teman...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:8px;">
+          <input type="text" id="joinCodeInput" placeholder="Contoh: K7P2MX" maxlength="8" style="margin-bottom:6px; text-transform:uppercase; letter-spacing:2px; font-weight:700;" />
+
+          <button class="btn btn-primary btn-block" id="btnConfirmJoin">Masuk Room</button>
+        </div>
+      </div>
+
+      <div class="section-title">Players</div>
+      <div id="playersList"></div>
+
+      <div class="section-title" style="margin-top:16px;">Info Pack</div>
+      <div id="packInfoBox" style="font-size:0.8rem;color:var(--muted);">
+        Belum di-load
+      </div>
+
+      <div style="margin-top:20px;font-size:0.75rem;color:var(--muted);line-height:1.5;">
+        <strong>Cara pakai multiplayer:</strong><br>
+        1. Host klik <b>Buat Room</b> → dapat code 6 huruf (contoh: K7P2MX)<br>
+        2. Kirim code itu ke teman (WA/Discord)<br>
+        3. Teman buka aplikasi yang sama → Join → paste code<br>
+        4. Keduanya harus import ZIP pack yang sama<br>
+        5. Rekam take, otomatis terkirim ke lawan<br>
+        6. Watch Dub memakai take dari kalian berdua
+      </div>
+
+    </aside>
+  </div>
+
+  <script>
+    // ========== State ==========
+    const state = {
+      pack: null,          // { title, clips: [], backingUrl, videoUrl, files }
+      currentIndex: -1,
+      takes: {},           // id -> { blob, url, by: playerName }
+      remoteTakes: {},     // from peer
+      mediaRecorder: null,
+      recordedChunks: [],
+      isRecording: false,
+      audioCtx: null,
+      peer: null,
+      conn: null,
+      isHost: false,
+      roomId: null,
+      myName: 'Player1',
+      peerId: null,
+      connected: false,
+    };
+
+    // ========== DOM ==========
+    const $ = id => document.getElementById(id);
+    const dropzone = $('dropzone');
+    const zipInput = $('zipInput');
+    const clipList = $('clipList');
+    const monitorImg = $('monitorImg');
+    const monitorVideo = $('monitorVideo');
+    const monitorPlaceholder = $('monitorPlaceholder');
+    const captionBar = $('captionBar');
+    const waveCanvas = $('waveCanvas');
+    const ctx = waveCanvas.getContext('2d');
+
+    // ========== Helpers ==========
+    function uid() { return Math.random().toString(36).slice(2, 10); }
+
+    function setStatus(el, msg, type = 'info') {
+      el.className = 'status-msg ' + type;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function revokeUrl(url) {
+      if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+    }
+
+    // ========== ZIP Import ==========
+    dropzone.addEventListener('click', () => zipInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleZip(e.dataTransfer.files[0]);
+    });
+    zipInput.addEventListener('change', () => {
+      if (zipInput.files[0]) handleZip(zipInput.files[0]);
+    });
+
+    async function handleZip(file) {
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        setStatus($('importStatus'), 'Harus file .zip', 'err');
+        return;
+      }
+      setStatus($('importStatus'), 'Membaca ZIP...', 'info');
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const files = {};
+        const entries = Object.keys(zip.files).filter(n => !zip.files[n].dir);
+
+        // Normalize paths (remove leading folder if single root)
+        let root = '';
+        if (entries.length) {
+          const parts = entries[0].split('/');
+          if (parts.length > 1) {
+            const candidate = parts[0] + '/';
+            if (entries.every(e => e.startsWith(candidate) || e === parts[0])) root = candidate;
+          }
+        }
+
+        for (const name of entries) {
+          const rel = root ? name.slice(root.length) : name;
+          if (!rel) continue;
+          const blob = await zip.files[name].async('blob');
+          files[rel] = blob;
+        }
+
+        // Parse pack
+        const pack = parsePack(files);
+        if (!pack.clips.length) {
+          setStatus($('importStatus'), 'Tidak menemukan clip (*.mp3 + *.png/*.txt). Cek struktur ZIP.', 'err');
+          return;
+        }
+
+        // Wait until .txt files are parsed & clips sorted by dub_timestamps
+        if (pack._parsePromise) {
+          setStatus($('importStatus'), 'Mengurutkan clip berdasarkan timestamp...', 'info');
+          await pack._parsePromise;
+        }
+
+        // Cleanup old
+        if (state.pack) {
+          state.pack.clips.forEach(c => {
+            revokeUrl(c.audioUrl); revokeUrl(c.imgUrl);
+          });
+          revokeUrl(state.pack.backingUrl);
+          revokeUrl(state.pack.videoUrl);
+        }
+        Object.values(state.takes).forEach(t => revokeUrl(t.url));
+        state.takes = {};
+        state.remoteTakes = {};
+
+        state.pack = pack;
+        state.currentIndex = 0;
+        $('packTitle').textContent = pack.title || file.name.replace('.zip', '');
+        renderClipList();
+        selectClip(0);
+        updateButtons();
+        setStatus($('importStatus'), `Loaded ${pack.clips.length} clips (urut timestamp)`, 'ok');
+        updatePackInfo();
+
+      } catch (err) {
+        console.error(err);
+        setStatus($('importStatus'), 'Gagal baca ZIP: ' + err.message, 'err');
+      }
+    }
+
+    function parsePack(files) {
+      const clips = [];
+      const names = Object.keys(files);
+
+      // Find pairs by base name
+      const audioMap = {};
+      const imgMap = {};
+      const txtMap = {};
+
+      for (const name of names) {
+        const base = name.replace(/\.[^.]+$/, '');
+        if (/\.(mp3|wav|ogg|m4a)$/i.test(name) && !/backing|track|pack/i.test(name)) {
+          audioMap[base] = name;
+        } else if (/\.(png|jpg|jpeg|webp)$/i.test(name)) {
+          imgMap[base] = name;
+        } else if (/\.txt$/i.test(name)) {
+          txtMap[base] = name;
+        }
+      }
+
+      // Build clips (will sort later by timestamp)
+      for (const base of Object.keys(audioMap)) {
+        const audioName = audioMap[base];
+        const imgName = imgMap[base] || imgMap[base.replace(/_/g, ' ')] || null;
+        const txtName = txtMap[base] || null;
+
+        // Fallback character from filename
+        let character = base;
+        const m = base.match(/^\d+[_\-\s]*(.+)$/);
+        if (m) character = m[1].replace(/_/g, ' ').trim();
+
+        const audioBlob = files[audioName];
+        const audioUrl = URL.createObjectURL(audioBlob);
+        let imgUrl = null;
+        if (imgName) imgUrl = URL.createObjectURL(files[imgName]);
+
+        clips.push({
+          id: base,
+          character,
+          audioBlob,
+          audioUrl,
+          imgUrl,
+          imgBlob: imgName ? files[imgName] : null,
+          textBlob: txtName ? files[txtName] : null,
+          text: '',
+          timestamp: 99999, // default high so unsorted go last
+          caption: '',
+        });
+      }
+
+      // Parse .txt for caption, character, and especially dub_timestamps
+      // Then sort by timestamp so order matches the original video
+      const parsePromise = (async () => {
+        for (const c of clips) {
+          if (!c.textBlob) continue;
+          try {
+            const raw = await c.textBlob.text();
+            // caption="...."
+            const capMatch = raw.match(/caption\s*=\s*"([^"]*)"/i) || raw.match(/caption\s*=\s*'([^']*)'/i);
+            if (capMatch) {
+              c.caption = capMatch[1].trim();
+              c.text = c.caption;
+            } else {
+              // fallback: take first non-empty line
+              c.text = raw.split('\n').map(l => l.trim()).filter(Boolean)[0] || c.character;
+            }
+
+            // dub_characters=["Name"]
+            const charMatch = raw.match(/dub_characters\s*=\s*\[\s*"([^"]+)"\s*\]/i);
+            if (charMatch) c.character = charMatch[1].trim();
+
+            // dub_timestamps=[12.345]  ← this is the key for correct order
+            const tsMatch = raw.match(/dub_timestamps\s*=\s*\[\s*([\d.]+)\s*\]/i);
+            if (tsMatch) {
+              c.timestamp = parseFloat(tsMatch[1]);
+            }
+          } catch (e) {
+            console.warn('Failed parsing txt for', c.id, e);
+          }
+        }
+
+        // Sort by timestamp ascending (correct video order)
+        clips.sort((a, b) => a.timestamp - b.timestamp);
+
+        // Refresh UI if already loaded
+        if (state.pack && state.pack.clips === clips) {
+          renderClipList();
+          if (state.currentIndex >= 0) selectClip(Math.min(state.currentIndex, clips.length - 1));
+        }
+      })();
+
+      // Backing + video
+      let backingUrl = null, videoUrl = null;
+      for (const name of names) {
+        const l = name.toLowerCase();
+        if (/backing|track/i.test(l) && /\.(mp3|wav|ogg|m4a)$/i.test(l)) {
+          backingUrl = URL.createObjectURL(files[name]);
+        }
+        if (/dub_video|video/i.test(l) && /\.(ogv|mp4|webm)$/i.test(l)) {
+          videoUrl = URL.createObjectURL(files[name]);
+        }
+      }
+
+      // Title from pack_info.ini
+      let title = 'Imported Pack';
+      for (const name of names) {
+        if (/pack_info|packinfo|\.ini$/i.test(name)) {
+          // we will try to parse it async too, but set a reasonable default
+        }
+      }
+
+      // Also try to read title from _pack_info.ini synchronously if small
+      (async () => {
+        for (const name of names) {
+          if (/pack_info|packinfo/i.test(name) && name.toLowerCase().endsWith('.ini')) {
+            try {
+              const raw = await files[name].text();
+              const tMatch = raw.match(/title\s*=\s*"([^"]+)"/i);
+              if (tMatch) {
+                title = tMatch[1];
+                if (state.pack) {
+                  state.pack.title = title;
+                  $('packTitle').textContent = title;
+                  updatePackInfo();
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      })();
+
+      return { title, clips, backingUrl, videoUrl, files, _parsePromise: parsePromise };
+    }
+
+
+    function renderClipList() {
+      clipList.innerHTML = '';
+      if (!state.pack) return;
+      state.pack.clips.forEach((c, i) => {
+        const li = document.createElement('li');
+        li.className = 'clip-item' + (i === state.currentIndex ? ' active' : '');
+        const hasTake = state.takes[c.id] || state.remoteTakes[c.id];
+        if (hasTake) li.classList.add('has-take');
+        const ts = (c.timestamp < 99999) ? c.timestamp.toFixed(1) + 's' : '';
+        const shortCap = (c.caption || c.text || '').slice(0, 28);
+        li.innerHTML = `
+          <div class="status-dot"></div>
+          <div class="clip-meta">
+            <div class="clip-name">${c.character} ${ts ? '<span class="char-tag">' + ts + '</span>' : ''}</div>
+            <div class="clip-char">${shortCap || c.id}</div>
+          </div>
+        `;
+        li.onclick = () => selectClip(i);
+        clipList.appendChild(li);
+      });
+      $('clipCount').textContent = state.pack.clips.length;
+    }
+
+
+    function selectClip(index) {
+      if (!state.pack || index < 0 || index >= state.pack.clips.length) return;
+      state.currentIndex = index;
+      const c = state.pack.clips[index];
+
+      // Visual
+      monitorPlaceholder.classList.add('hidden');
+      monitorVideo.classList.add('hidden');
+      monitorVideo.pause();
+      monitorImg.classList.remove('hidden');
+      if (c.imgUrl) {
+        monitorImg.src = c.imgUrl;
+        monitorImg.classList.remove('hidden');
+      } else {
+        monitorImg.classList.add('hidden');
+        monitorPlaceholder.classList.remove('hidden');
+        monitorPlaceholder.textContent = c.character;
+      }
+
+      captionBar.textContent = c.text || c.character;
+      captionBar.classList.remove('hidden');
+
+      $('currentClipLabel').textContent = `${index + 1}/${state.pack.clips.length} — ${c.character}`;
+      const take = state.takes[c.id] || state.remoteTakes[c.id];
+      $('takeStatus').textContent = take
+        ? `Take by ${take.by || 'me'}`
+        : 'Belum ada take';
+
+      renderClipList();
+      drawWaveform(null);
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const hasPack = !!state.pack;
+      const hasClip = hasPack && state.currentIndex >= 0;
+      const c = hasClip ? state.pack.clips[state.currentIndex] : null;
+      const hasTake = c && (state.takes[c.id] || state.remoteTakes[c.id]);
+
+      $('btnHear').disabled = !hasClip;
+      $('btnRecord').disabled = !hasClip || state.isRecording;
+      $('btnPlayTake').disabled = !hasTake;
+      $('btnStop').disabled = !state.isRecording;
+      $('btnWatchDub').disabled = !hasPack;
+      $('btnExport').disabled = !hasPack || Object.keys(state.takes).length === 0;
+    }
+
+    function updatePackInfo() {
+      if (!state.pack) {
+        $('packInfoBox').textContent = 'Belum di-load';
+        return;
+      }
+      $('packInfoBox').innerHTML = `
+        <div><strong>${state.pack.title}</strong></div>
+        <div>${state.pack.clips.length} clips</div>
+        <div>Backing: ${state.pack.backingUrl ? '✓' : '—'}</div>
+        <div>Video: ${state.pack.videoUrl ? '✓' : '—'}</div>
+      `;
+    }
+
+    // ========== Audio / Recording ==========
+    let currentAudio = null;
+
+    function stopAllAudio() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      if (state.mediaRecorder && state.isRecording) {
+        state.mediaRecorder.stop();
+      }
+    }
+
+    $('btnHear').onclick = () => {
+      if (!state.pack || state.currentIndex < 0) return;
+      stopAllAudio();
+      const c = state.pack.clips[state.currentIndex];
+      currentAudio = new Audio(c.audioUrl);
+      currentAudio.onended = () => { currentAudio = null; updateButtons(); };
+      currentAudio.play();
+      // simple waveform peak animation placeholder
+      animateWave();
+    };
+
+    $('btnRecord').onclick = async () => {
+      if (state.isRecording) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.recordedChunks = [];
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm';
+        state.mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        state.mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) state.recordedChunks.push(e.data);
+        };
+        state.mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(state.recordedChunks, { type: mime });
+          const url = URL.createObjectURL(blob);
+          const c = state.pack.clips[state.currentIndex];
+          if (state.takes[c.id]) revokeUrl(state.takes[c.id].url);
+          state.takes[c.id] = { blob, url, by: state.myName };
+          state.isRecording = false;
+          $('recStatus').classList.add('hidden');
+          $('takeStatus').textContent = `Take by ${state.myName}`;
+          renderClipList();
+          updateButtons();
+          drawWaveform(blob);
+          // send to peer
+          sendTakeToPeer(c.id, blob);
+        };
+        state.mediaRecorder.start();
+        state.isRecording = true;
+        setStatus($('recStatus'), '● REC — bicara sekarang...', 'err');
+        updateButtons();
+
+        // also play original silently as timing cue? optional: play muted original
+        // for simplicity we don't auto-play original during record
+      } catch (err) {
+        alert('Gagal akses mikrofon: ' + err.message + '\nPastikan izin mic diberikan dan pakai HTTPS / localhost.');
+      }
+    };
+
+    $('btnStop').onclick = () => {
+      if (state.mediaRecorder && state.isRecording) {
+        state.mediaRecorder.stop();
+      }
+    };
+
+    $('btnPlayTake').onclick = () => {
+      const c = state.pack.clips[state.currentIndex];
+      const take = state.takes[c.id] || state.remoteTakes[c.id];
+      if (!take) return;
+      stopAllAudio();
+      currentAudio = new Audio(take.url);
+      currentAudio.play();
+    };
+
+    // simple fake waveform while playing
+    let animId = null;
+    function animateWave() {
+      cancelAnimationFrame(animId);
+      const w = waveCanvas.width = waveCanvas.clientWidth * devicePixelRatio;
+      const h = waveCanvas.height = waveCanvas.clientHeight * devicePixelRatio;
+      let t = 0;
+      function draw() {
+        ctx.fillStyle = '#12151c';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#6c5ce7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const y = h/2 + Math.sin(x * 0.03 + t) * (h/3) * Math.sin(t * 0.5);
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        t += 0.15;
+        if (currentAudio && !currentAudio.paused) animId = requestAnimationFrame(draw);
+        else {
+          ctx.fillStyle = '#12151c';
+          ctx.fillRect(0, 0, w, h);
+        }
+      }
+      draw();
+    }
+
+    async function drawWaveform(blob) {
+      cancelAnimationFrame(animId);
+      const w = waveCanvas.width = waveCanvas.clientWidth * devicePixelRatio;
+      const h = waveCanvas.height = waveCanvas.clientHeight * devicePixelRatio;
+      ctx.fillStyle = '#12151c';
+      ctx.fillRect(0, 0, w, h);
+      if (!blob) return;
+      try {
+        if (!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = await blob.arrayBuffer();
+        const audioBuf = await state.audioCtx.decodeAudioData(buf);
+        const data = audioBuf.getChannelData(0);
+        const step = Math.ceil(data.length / w);
+        ctx.strokeStyle = '#00cec9';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < w; i++) {
+          let min = 1, max = -1;
+          for (let j = 0; j < step; j++) {
+            const v = data[i * step + j] || 0;
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+          const y1 = (1 + min) * h / 2;
+          const y2 = (1 + max) * h / 2;
+          ctx.moveTo(i, y1);
+          ctx.lineTo(i, y2);
+        }
+        ctx.stroke();
+      } catch (e) { console.warn(e); }
+    }
+
+    // ========== Watch Dub (simple sequential) ==========
+    $('btnWatchDub').onclick = async () => {
+      if (!state.pack) return;
+      stopAllAudio();
+      // Prefer video if available
+      if (state.pack.videoUrl) {
+        monitorImg.classList.add('hidden');
+        monitorPlaceholder.classList.add('hidden');
+        monitorVideo.classList.remove('hidden');
+        monitorVideo.src = state.pack.videoUrl;
+        monitorVideo.muted = true; // we will mix audio ourselves ideally, but for simple: just play video + try to overlay takes is hard without proper timeline
+        // For true mixing we need timestamps which pack may not have.
+        // Simple version: play sequential takes with images
+      }
+
+      // Sequential image + take playback (most reliable without timing data)
+      let i = 0;
+      const playNext = () => {
+        if (i >= state.pack.clips.length) {
+          captionBar.textContent = 'Selesai!';
+          return;
+        }
+        selectClip(i);
+        const c = state.pack.clips[i];
+        const take = state.takes[c.id] || state.remoteTakes[c.id];
+        const src = take ? take.url : c.audioUrl;
+        currentAudio = new Audio(src);
+        currentAudio.onended = () => {
+          i++;
+          setTimeout(playNext, 300);
+        };
+        currentAudio.play();
+      };
+      playNext();
+    };
+
+    // ========== Export (simple: download takes as zip of audio) ==========
+    $('btnExport').onclick = async () => {
+      if (!state.pack) return;
+      const zip = new JSZip();
+      const folder = zip.folder('takes');
+      for (const [id, take] of Object.entries(state.takes)) {
+        const ext = take.blob.type.includes('webm') ? 'webm' : 'ogg';
+        folder.file(`${id}_by_${take.by || 'me'}.${ext}`, take.blob);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = (state.pack.title || 'dub') + '_takes.zip';
+      a.click();
+    };
+
+    $('btnClearPack').onclick = () => {
+      if (!confirm('Hapus pack & semua take?')) return;
+      if (state.pack) {
+        state.pack.clips.forEach(c => { revokeUrl(c.audioUrl); revokeUrl(c.imgUrl); });
+        revokeUrl(state.pack.backingUrl);
+        revokeUrl(state.pack.videoUrl);
+      }
+      Object.values(state.takes).forEach(t => revokeUrl(t.url));
+      state.pack = null;
+      state.takes = {};
+      state.remoteTakes = {};
+      state.currentIndex = -1;
+      clipList.innerHTML = '';
+      $('clipCount').textContent = '0';
+      $('packTitle').textContent = 'Belum ada pack';
+      monitorImg.classList.add('hidden');
+      monitorVideo.classList.add('hidden');
+      monitorPlaceholder.classList.remove('hidden');
+      captionBar.classList.add('hidden');
+      updateButtons();
+      updatePackInfo();
+      setStatus($('importStatus'), 'Pack dihapus', 'info');
+    };
+
+    // ========== Multiplayer (PeerJS) — short room code ==========
+    function generateShortCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    function updatePlayersUI() {
+      const list = $('playersList');
+      list.innerHTML = '';
+      const me = document.createElement('div');
+      me.className = 'player-card me';
+      me.innerHTML = `<div class="player-name">${state.myName} (kamu)</div>
+        <div class="player-role">${state.isHost ? 'Host' : 'Guest'} ${state.connected ? '• Connected' : ''}</div>`;
+      list.appendChild(me);
+
+      if (state.connected && state.conn) {
+        const other = document.createElement('div');
+        other.className = 'player-card';
+        other.innerHTML = `<div class="player-name">Teman</div>
+          <div class="player-role">Connected</div>`;
+        list.appendChild(other);
+      }
+    }
+
+    function sendTakeToPeer(clipId, blob) {
+      if (!state.conn || !state.connected) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.conn.send({
+          type: 'take',
+          clipId,
+          by: state.myName,
+          data: reader.result,
+          mime: blob.type
+        });
+      };
+      reader.readAsArrayBuffer(blob);
+    }
+
+    function setupPeerHandlers(conn) {
+      conn.on('data', data => {
+        if (data.type === 'take') {
+          const blob = new Blob([data.data], { type: data.mime || 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          if (state.remoteTakes[data.clipId]) revokeUrl(state.remoteTakes[data.clipId].url);
+          state.remoteTakes[data.clipId] = { blob, url, by: data.by };
+          renderClipList();
+          if (state.currentIndex >= 0 && state.pack.clips[state.currentIndex].id === data.clipId) {
+            $('takeStatus').textContent = `Take by ${data.by}`;
+            updateButtons();
+          }
+          setStatus($('roomStatus'), `Terima take dari ${data.by}`, 'ok');
+        } else if (data.type === 'hello') {
+          setStatus($('roomStatus'), `${data.name} bergabung!`, 'ok');
+          state.connected = true;
+          updatePlayersUI();
+          conn.send({ type: 'hello', name: state.myName });
+        }
+      });
+      conn.on('open', () => {
+        state.connected = true;
+        setStatus($('roomStatus'), 'Terhubung!', 'ok');
+        conn.send({ type: 'hello', name: state.myName });
+        updatePlayersUI();
+      });
+      conn.on('close', () => {
+        state.connected = false;
+        setStatus($('roomStatus'), 'Koneksi terputus', 'err');
+        updatePlayersUI();
+      });
+      conn.on('error', err => {
+        setStatus($('roomStatus'), 'Error koneksi: ' + (err.type || err), 'err');
+      });
+    }
+
+    $('btnCreateRoom').onclick = () => {
+      state.myName = $('playerName').value.trim() || 'Player1';
+      if (state.peer) { try { state.peer.destroy(); } catch(_){} }
+      state.isHost = true;
+      state.connected = false;
+
+      // Generate short 6-char code and use it as custom Peer ID
+      const shortCode = generateShortCode();
+      state.roomId = shortCode;
+
+      // PeerJS allows custom ID (must be unique)
+      state.peer = new Peer(shortCode, {
+        debug: 1
+      });
+
+      state.peer.on('open', id => {
+        state.peerId = id;
+        $('roomCodeDisplay').value = id;
+        $('roomInfo').classList.remove('hidden');
+        $('joinBox').classList.add('hidden');
+        setStatus($('roomStatus'), 'Room siap! Bagikan code 6 huruf ke teman.', 'ok');
+        updatePlayersUI();
+      });
+
+      state.peer.on('connection', conn => {
+        state.conn = conn;
+        setupPeerHandlers(conn);
+      });
+
+      state.peer.on('error', err => {
+        console.error(err);
+        if (err.type === 'unavailable-id') {
+          // Code already taken, try again
+          setStatus($('roomStatus'), 'Code bentrok, mencoba lagi...', 'info');
+          setTimeout(() => $('btnCreateRoom').click(), 500);
+        } else {
+          setStatus($('roomStatus'), 'Error: ' + (err.type || err.message || err), 'err');
+        }
+      });
+    };
+
+    $('btnJoinRoom').onclick = () => {
+      $('joinBox').classList.remove('hidden');
+      $('roomInfo').classList.add('hidden');
+    };
+
+    $('btnConfirmJoin').onclick = () => {
+      let code = $('joinCodeInput').value.trim().toUpperCase();
+      if (!code) return alert('Masukkan room code (6 huruf)');
+      state.myName = $('playerName').value.trim() || 'Player2';
+      if (state.peer) { try { state.peer.destroy(); } catch(_){} }
+      state.isHost = false;
+      state.connected = false;
+
+      // Guest also gets a random peer ID, then connects to host's short code
+      state.peer = new Peer({ debug: 1 });
+      state.peer.on('open', () => {
+        state.conn = state.peer.connect(code, { reliable: true });
+        setupPeerHandlers(state.conn);
+        $('roomInfo').classList.remove('hidden');
+        $('roomCodeDisplay').value = code;
+        setStatus($('roomStatus'), 'Menghubungkan ke ' + code + '...', 'info');
+      });
+      state.peer.on('error', err => {
+        console.error(err);
+        setStatus($('roomStatus'), 'Gagal connect: ' + (err.type || err.message || err), 'err');
+      });
+    };
+
+    $('btnCopyCode').onclick = () => {
+      const code = $('roomCodeDisplay').value;
+      navigator.clipboard.writeText(code).then(() => {
+        setStatus($('roomStatus'), 'Code dicopy! Kirim ke teman.', 'ok');
+      }).catch(() => {
+        // fallback
+        $('roomCodeDisplay').select();
+        document.execCommand('copy');
+        setStatus($('roomStatus'), 'Code dicopy!', 'ok');
+      });
+    };
+
+    // init
+    updateButtons();
+    updatePlayersUI();
+  </script>
+</body>
+</html>
+

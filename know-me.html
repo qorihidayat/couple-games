@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How Well Do You Know Me (LDR) — Couple Games</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0c15; --card: #1a1525; --accent: #2ecc71; --text: #f0eef5;
+      --muted: #9b93a8; --border: #2d2640; --ok: #2ecc71; --err: #ff6b6b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh;
+      background-image: radial-gradient(ellipse at 70% 20%, rgba(46,204,113,0.1), transparent 50%); }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 8px; flex-wrap: wrap; }
+    header a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    header h1 { font-size: 1.05rem; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+    input[type="text"] { width: 100%; background: #12101a; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 8px; }
+    input:focus { outline: 2px solid var(--accent); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 11px 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #0a1f14; }
+    .btn-secondary { background: #2d2640; color: var(--text); }
+    .btn-block { width: 100%; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .status { font-size: 0.8rem; padding: 8px 10px; border-radius: 8px; margin-top: 10px; }
+    .status.ok { background: rgba(46,204,113,0.15); color: var(--ok); }
+    .status.info { background: rgba(46,204,113,0.1); color: var(--accent); }
+    .status.err { background: rgba(255,107,107,0.15); color: var(--err); }
+    .hidden { display: none !important; }
+    .q-num { font-size: 0.75rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+    .q-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; line-height: 1.4; }
+    .score-big { font-size: 3rem; font-weight: 800; text-align: center; background: linear-gradient(135deg,#2ecc71,#1abc9c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .result-list { list-style: none; margin-top: 14px; }
+    .result-list li { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; background: #12101a; font-size: 0.88rem; }
+    .result-list li.correct { border-left: 3px solid #2ecc71; }
+    .result-list li.wrong { border-left: 3px solid #ff6b6b; }
+    .role-pick { display: flex; gap: 10px; margin: 12px 0; }
+    .role-pick button { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: #12101a; color: var(--text); font-weight: 700; cursor: pointer; }
+    .role-pick button.active { border-color: var(--accent); background: rgba(46,204,113,0.15); }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Dashboard</a>
+    <h1>🧠 How Well Do You Know Me</h1>
+    <div style="font-size:0.75rem;color:var(--muted);" id="connBadge">Offline</div>
+  </header>
+  <div class="wrap">
+    <div id="lobby">
+      <div class="card">
+        <div class="section-title">Multiplayer LDR</div>
+        <input type="text" id="myName" placeholder="Nama kamu" value="Player1" />
+        <div class="row">
+          <button class="btn btn-primary btn-block" id="btnCreate">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinShow">Join</button>
+        </div>
+        <div id="roomBox" class="hidden" style="margin-top:12px;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Room Code</div>
+          <div class="row">
+            <input type="text" id="roomCode" readonly style="font-family:monospace;font-weight:800;letter-spacing:2px;text-align:center;" />
+            <button class="btn btn-secondary" id="btnCopy">Copy</button>
+          </div>
+          <div id="roomStatus" class="status info">Menunggu pasangan...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:12px;">
+          <input type="text" id="joinCode" placeholder="Code 6 huruf" maxlength="8" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;" />
+          <button class="btn btn-primary btn-block" id="btnJoin" style="margin-top:8px;">Masuk Room</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="roleScreen" class="hidden">
+      <div class="card">
+        <h3 style="margin-bottom:8px;">Pilih peran</h3>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Satu jadi Subject (dijawab), satu jadi Guesser (menebak).</p>
+        <div class="role-pick">
+          <button id="btnSubject">Saya Subject</button>
+          <button id="btnGuesser">Saya Guesser</button>
+        </div>
+        <div id="roleStatus" class="status info">Menunggu pasangan memilih peran...</div>
+      </div>
+    </div>
+
+    <div id="playScreen" class="hidden">
+      <div class="card">
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;" id="phaseLabel"></div>
+        <div class="q-num" id="qNum"></div>
+        <div class="q-text" id="qText"></div>
+        <input type="text" id="answer" placeholder="Jawaban / tebakan..." />
+        <button class="btn btn-primary btn-block" id="btnSubmit" style="margin-top:8px;">Kirim</button>
+        <div id="waitMsg" class="status info hidden">Menunggu pasangan...</div>
+      </div>
+    </div>
+
+    <div id="resultScreen" class="hidden">
+      <div class="card" style="text-align:center;">
+        <div style="font-size:0.9rem;color:var(--muted);">Skor</div>
+        <div class="score-big" id="scoreBig">0/0</div>
+        <div id="scoreMsg" style="margin-top:6px;font-weight:600;"></div>
+      </div>
+      <ul class="result-list" id="resultList"></ul>
+      <button class="btn btn-primary btn-block" onclick="location.reload()" style="margin-top:12px;">Main Lagi</button>
+    </div>
+  </div>
+
+  <script>
+    let questions = [];
+    let selected = [];
+    function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+
+    // Load questions from external JSON (easy to edit)
+    fetch('questions-knowme.json')
+      .then(r => r.json())
+      .then(data => {
+        questions = data;
+        selected = shuffle(questions).slice(0, Math.min(7, questions.length));
+        console.log('KnowMe questions loaded:', selected.length);
+      })
+      .catch(err => console.warn('Gagal load questions-knowme.json', err));
+
+    const state = {
+      peer:null, conn:null, isHost:false, connected:false,
+      myName:'Player1', partnerName:'Partner',
+      role:null, partnerRole:null,
+      phase:'answer', // answer | guess | done
+      idx:0, myAnswers:[], partnerAnswers:[],
+      isSubject:false
+    };
+    const $ = id => document.getElementById(id);
+    function setStatus(msg,type='info'){const el=$('roomStatus');if(el){el.className='status '+type;el.textContent=msg;}}
+    function generateCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+    function send(d){if(state.conn&&state.connected)state.conn.send(d);}
+    function updateBadge(){$('connBadge').textContent=state.connected?'● Connected':'○ Offline';$('connBadge').style.color=state.connected?'#2ecc71':'var(--muted)';}
+
+    function setupConn(conn){
+      state.conn=conn;
+      conn.on('open',()=>{
+        state.connected=true; setStatus('Terhubung!','ok'); updateBadge();
+        send({type:'hello',name:state.myName});
+        $('lobby').classList.add('hidden');
+        $('roleScreen').classList.remove('hidden');
+      });
+      conn.on('data', data => {
+        if(data.type==='hello'){ state.partnerName=data.name; setStatus(data.name+' bergabung!','ok'); }
+        else if(data.type==='role'){
+          state.partnerRole=data.role;
+          checkRoles();
+        }
+        else if(data.type==='answer'){
+          state.partnerAnswers[data.idx]=data.answer;
+          if(state.phase==='answer' && state.isSubject===false){
+            // we are waiting for subject answers? actually subject sends all then we guess
+          }
+          // if we are guesser and subject finished answering
+          if(data.done){
+            state.partnerAnswers=data.answers;
+            startGuessing();
+          }
+        }
+        else if(data.type==='guess'){
+          state.partnerAnswers[data.idx]=data.answer; // reuse for guesses when we are subject
+          if(data.done){
+            state.partnerAnswers=data.answers;
+            showResult();
+          }
+        }
+      });
+      conn.on('close',()=>{state.connected=false;updateBadge();setStatus('Terputus','err');});
+    }
+
+    function checkRoles(){
+      if(state.role && state.partnerRole){
+        if(state.role===state.partnerRole){
+          $('roleStatus').className='status err';
+          $('roleStatus').textContent='Peran sama! Pilih yang berbeda.';
+          state.role=null; state.partnerRole=null;
+          document.querySelectorAll('.role-pick button').forEach(b=>b.classList.remove('active'));
+          return;
+        }
+        state.isSubject = state.role==='subject';
+        $('roleScreen').classList.add('hidden');
+        $('playScreen').classList.remove('hidden');
+        if (!selected.length && questions.length) selected = shuffle(questions).slice(0, Math.min(7, questions.length));
+        if(state.isSubject){
+          state.phase='answer';
+          state.idx=0;
+          showQuestion();
+        } else {
+          $('phaseLabel').textContent='Menunggu Subject menjawab semua pertanyaan...';
+          $('qText').textContent='Sabar ya 😊';
+          $('answer').classList.add('hidden');
+          $('btnSubmit').classList.add('hidden');
+          $('waitMsg').classList.remove('hidden');
+        }
+      }
+    }
+
+    function showQuestion(){
+      $('qNum').textContent=`Pertanyaan ${state.idx+1} / ${selected.length}`;
+      $('qText').textContent=selected[state.idx];
+      $('answer').value='';
+      $('answer').classList.remove('hidden');
+      $('btnSubmit').classList.remove('hidden');
+      $('waitMsg').classList.add('hidden');
+      if(state.phase==='answer'){
+        $('phaseLabel').textContent=`Kamu Subject — jawab jujur (${state.myName})`;
+      } else {
+        $('phaseLabel').textContent=`Kamu Guesser — tebak jawaban ${state.partnerName}`;
+      }
+    }
+
+    function startGuessing(){
+      state.phase='guess';
+      state.idx=0;
+      state.myAnswers=[]; // now will store guesses
+      showQuestion();
+    }
+
+    $('btnSubmit').onclick=()=>{
+      const ans=$('answer').value.trim();
+      if(!ans) return alert('Isi dulu');
+      if(state.phase==='answer'){
+        state.myAnswers.push(ans);
+        state.idx++;
+        if(state.idx<selected.length){
+          showQuestion();
+        } else {
+          // done answering, send all to partner
+          send({type:'answer', done:true, answers:state.myAnswers});
+          $('phaseLabel').textContent='Selesai jawab. Menunggu Guesser menebak...';
+          $('qText').textContent='Tunggu hasilnya ya';
+          $('answer').classList.add('hidden');
+          $('btnSubmit').classList.add('hidden');
+          $('waitMsg').classList.remove('hidden');
+        }
+      } else if(state.phase==='guess'){
+        state.myAnswers.push(ans);
+        state.idx++;
+        if(state.idx<selected.length){
+          showQuestion();
+        } else {
+          send({type:'guess', done:true, answers:state.myAnswers});
+          // partnerAnswers currently holds subject answers
+          showResult();
+        }
+      }
+    };
+
+    function normalize(s){return (s||'').toLowerCase().replace(/[^a-z0-9\u00C0-\u024F]/g,'').trim();}
+    function showResult(){
+      // subject answers vs guesser answers
+      let subjectAns, guesserAns;
+      if(state.isSubject){
+        subjectAns = state.myAnswers; // wait, when subject, myAnswers was answers, partnerAnswers was guesses
+        // After subject finishes, myAnswers = subject answers
+        // When guesser finishes, partner sends guesses → state.partnerAnswers = guesses
+        // But when we are subject we overwrote? Let's fix:
+        // Better: keep separate.
+      }
+      // Simpler approach using current state:
+      // If I am subject: myAnswers = my subject answers, partnerAnswers = guesser guesses (after done)
+      // If I am guesser: partnerAnswers = subject answers, myAnswers = my guesses
+      if(state.isSubject){
+        subjectAns = state.myAnswers;
+        guesserAns = state.partnerAnswers;
+      } else {
+        subjectAns = state.partnerAnswers;
+        guesserAns = state.myAnswers;
+      }
+      let score=0;
+      const list=$('resultList'); list.innerHTML='';
+      selected.forEach((q,i)=>{
+        const s=subjectAns[i]||'—';
+        const g=guesserAns[i]||'—';
+        const ok = normalize(s)===normalize(g) || normalize(s).includes(normalize(g)) || normalize(g).includes(normalize(s));
+        if(ok) score++;
+        const li=document.createElement('li');
+        li.className=ok?'correct':'wrong';
+        li.innerHTML=`<strong>${q}</strong><br>Jawaban: ${s}<br>Tebakan: ${g} ${ok?'✅':'❌'}`;
+        list.appendChild(li);
+      });
+      $('scoreBig').textContent=`${score}/${selected.length}`;
+      const pct=Math.round(score/selected.length*100);
+      let msg=pct>=85?'Sangat saling kenal! 💚':pct>=60?'Cukup kenal ✨':pct>=40?'Masih banyak yang harus dipelajari 👀':'Waktunya lebih banyak ngobrol 💬';
+      $('scoreMsg').textContent=msg;
+      $('playScreen').classList.add('hidden');
+      $('resultScreen').classList.remove('hidden');
+    }
+
+    // Role buttons
+    $('btnSubject').onclick=()=>{
+      state.role='subject';
+      $('btnSubject').classList.add('active'); $('btnGuesser').classList.remove('active');
+      send({type:'role', role:'subject'});
+      checkRoles();
+    };
+    $('btnGuesser').onclick=()=>{
+      state.role='guesser';
+      $('btnGuesser').classList.add('active'); $('btnSubject').classList.remove('active');
+      send({type:'role', role:'guesser'});
+      checkRoles();
+    };
+
+    // Room
+    $('btnCreate').onclick=()=>{
+      state.myName=$('myName').value.trim()||'Player1';
+      state.isHost=true;
+      if(state.peer) try{state.peer.destroy();}catch(_){}
+      const code=generateCode();
+      state.peer=new Peer(code,{debug:1});
+      state.peer.on('open',id=>{
+        $('roomCode').value=id; $('roomBox').classList.remove('hidden'); $('joinBox').classList.add('hidden');
+        setStatus('Room siap. Bagikan code.','ok');
+      });
+      state.peer.on('connection',c=>setupConn(c));
+      state.peer.on('error',err=>{
+        if(err.type==='unavailable-id') setTimeout(()=>$('btnCreate').click(),400);
+        else setStatus('Error: '+(err.type||err),'err');
+      });
+    };
+    $('btnJoinShow').onclick=()=>{ $('joinBox').classList.remove('hidden'); $('roomBox').classList.add('hidden'); };
+    $('btnJoin').onclick=()=>{
+      const code=$('joinCode').value.trim().toUpperCase();
+      if(!code) return alert('Masukkan code');
+      state.myName=$('myName').value.trim()||'Player2';
+      state.isHost=false;
+      if(state.peer) try{state.peer.destroy();}catch(_){}
+      state.peer=new Peer({debug:1});
+      state.peer.on('open',()=>{
+        setupConn(state.peer.connect(code,{reliable:true}));
+        $('roomBox').classList.remove('hidden'); $('roomCode').value=code;
+        setStatus('Menghubungkan...','info');
+      });
+      state.peer.on('error',err=>setStatus('Gagal: '+(err.type||err),'err'));
+    };
+    $('btnCopy').onclick=()=>navigator.clipboard.writeText($('roomCode').value).then(()=>setStatus('Code dicopy!','ok'));
+  </script>
+</body>
+</html>

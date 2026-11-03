@@ -1,0 +1,38 @@
+========================================
+CARA CUSTOM PERTANYAAN
+========================================
+
+Ada 3 file JSON yang bisa kamu edit:
+
+1. questions-tod.json
+   → Truth or Dare
+   → Struktur: soft / medium / spicy → masing-masing punya "truth" dan "dare" (array string)
+
+2. questions-knowme.json
+   → How Well Do You Know Me
+   → Struktur: array string biasa
+   → Game akan acak dan ambil 7 pertanyaan
+
+3. questions-lovematch.json
+   → Love Match
+   → Struktur: array object { "q": "pertanyaan", "opts": ["opsi1", "opsi2", ...] }
+
+----------------------------------------
+CONTOH EDIT (questions-tod.json)
+----------------------------------------
+Tambah pertanyaan di level "soft" → "truth":
+
+"truth": [
+  "Apa hal kecil yang paling kamu sukai dari pasanganmu?",
+  "PERTANYAAN BARU KAMU DI SINI"
+]
+
+Hapus saja baris yang tidak diinginkan.
+
+----------------------------------------
+PENTING
+----------------------------------------
+- Jaga format JSON tetap valid (koma, kurung, tanda kutip)
+- Setelah edit, upload ulang folder couple-games ke Netlify
+- Bisa pakai editor online jsonlint.com untuk cek valid tidaknya
+

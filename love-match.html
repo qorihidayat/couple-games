@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Love Match (LDR) — Couple Games</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0c15; --card: #1a1525; --accent: #ff6b9d; --text: #f0eef5;
+      --muted: #9b93a8; --border: #2d2640; --ok: #2ecc71;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh;
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(255,107,157,0.12), transparent 55%); }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 8px; flex-wrap: wrap; }
+    header a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    header h1 { font-size: 1.15rem; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+    input[type="text"] { width: 100%; background: #12101a; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 8px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 11px 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+    .btn-primary { background: linear-gradient(135deg,#ff6b9d,#c44dff); color: white; }
+    .btn-secondary { background: #2d2640; color: var(--text); }
+    .btn-block { width: 100%; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .status { font-size: 0.8rem; padding: 8px 10px; border-radius: 8px; margin-top: 10px; }
+    .status.ok { background: rgba(46,204,113,0.15); color: var(--ok); }
+    .status.info { background: rgba(255,107,157,0.12); color: var(--accent); }
+    .status.err { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+    .hidden { display: none !important; }
+    .q-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; line-height: 1.4; }
+    .opt { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--border); background: #12101a; cursor: pointer; margin-bottom: 8px; font-weight: 500; transition: 0.15s; }
+    .opt:hover, .opt.selected { border-color: var(--accent); background: rgba(255,107,157,0.12); }
+    .progress { height: 6px; background: #2d2640; border-radius: 3px; margin-bottom: 16px; overflow: hidden; }
+    .progress > div { height: 100%; background: linear-gradient(90deg,#ff6b9d,#c44dff); width: 0%; transition: 0.3s; }
+    .score-circle { width: 130px; height: 130px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; position: relative;
+      background: conic-gradient(#ff6b9d 0%, #2d2640 0%); }
+    .score-circle::before { content:''; position: absolute; inset: 10px; border-radius: 50%; background: var(--card); }
+    .score-circle span { position: relative; font-size: 2rem; font-weight: 800; background: linear-gradient(135deg,#ff6b9d,#c44dff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Dashboard</a>
+    <h1>💕 Love Match</h1>
+    <div style="font-size:0.75rem;color:var(--muted);" id="connBadge">Offline</div>
+  </header>
+  <div class="wrap">
+    <div id="lobby">
+      <div class="card">
+        <div class="section-title">Multiplayer LDR</div>
+        <input type="text" id="myName" placeholder="Nama kamu" value="Player1" />
+        <div class="row">
+          <button class="btn btn-primary btn-block" id="btnCreate">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinShow">Join</button>
+        </div>
+        <div id="roomBox" class="hidden" style="margin-top:12px;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Room Code</div>
+          <div class="row">
+            <input type="text" id="roomCode" readonly style="font-family:monospace;font-weight:800;letter-spacing:2px;text-align:center;" />
+            <button class="btn btn-secondary" id="btnCopy">Copy</button>
+          </div>
+          <div id="roomStatus" class="status info">Menunggu pasangan...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:12px;">
+          <input type="text" id="joinCode" placeholder="Code 6 huruf" maxlength="8" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;" />
+          <button class="btn btn-primary btn-block" id="btnJoin" style="margin-top:8px;">Masuk Room</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="quiz" class="hidden">
+      <div class="progress"><div id="prog"></div></div>
+      <div class="card">
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;" id="qCounter"></div>
+        <div class="q-text" id="qText"></div>
+        <div id="options"></div>
+      </div>
+      <div id="waitPartner" class="status info hidden">Menunggu pasangan selesai menjawab...</div>
+    </div>
+
+    <div id="result" class="hidden">
+      <div class="card" style="text-align:center;">
+        <div style="font-size:0.9rem;color:var(--muted);margin-bottom:8px;" id="coupleNames"></div>
+        <div class="score-circle" id="scoreCircle"><span id="scorePct">0%</span></div>
+        <div id="scoreTitle" style="font-size:1.25rem;font-weight:700;margin-bottom:8px;"></div>
+        <div id="scoreDesc" style="color:var(--muted);font-size:0.95rem;line-height:1.5;"></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="location.reload()">Main Lagi</button>
+    </div>
+  </div>
+
+  <script>
+    let questions = [];
+
+    // Load questions from external JSON (easy to edit)
+    fetch('questions-lovematch.json')
+      .then(r => r.json())
+      .then(data => {
+        questions = data;
+        console.log('LoveMatch questions loaded:', questions.length);
+      })
+      .catch(err => console.warn('Gagal load questions-lovematch.json', err));
+
+    const state = {
+      peer:null, conn:null, isHost:false, connected:false,
+      myName:'Player1', partnerName:'Partner',
+      idx:0, myAnswers:[], partnerAnswers:null, finished:false
+    };
+    const $ = id => document.getElementById(id);
+    function setStatus(msg,type='info'){const el=$('roomStatus');if(el){el.className='status '+type;el.textContent=msg;}}
+    function generateCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+    function send(d){if(state.conn&&state.connected)state.conn.send(d);}
+    function updateBadge(){$('connBadge').textContent=state.connected?'● Connected':'○ Offline';$('connBadge').style.color=state.connected?'#2ecc71':'var(--muted)';}
+
+    function setupConn(conn){
+      state.conn=conn;
+      conn.on('open',()=>{
+        state.connected=true; setStatus('Terhubung!','ok'); updateBadge();
+        send({type:'hello',name:state.myName});
+        $('lobby').classList.add('hidden');
+        $('quiz').classList.remove('hidden');
+        showQuestion();
+      });
+      conn.on('data', data => {
+        if(data.type==='hello'){ state.partnerName=data.name; setStatus(data.name+' bergabung!','ok'); }
+        else if(data.type==='answers'){
+          state.partnerAnswers=data.answers;
+          tryShowResult();
+        }
+      });
+      conn.on('close',()=>{state.connected=false;updateBadge();setStatus('Terputus','err');});
+    }
+
+    function showQuestion(){
+      if (!questions.length) {
+        setTimeout(showQuestion, 200);
+        return;
+      }
+      const item=questions[state.idx];
+      $('qCounter').textContent=`Pertanyaan ${state.idx+1} dari ${questions.length}`;
+      $('qText').textContent=item.q;
+      $('prog').style.width=((state.idx/questions.length)*100)+'%';
+      const box=$('options'); box.innerHTML='';
+      item.opts.forEach((opt,i)=>{
+        const div=document.createElement('div');
+        div.className='opt';
+        div.textContent=opt;
+        div.onclick=()=>{
+          state.myAnswers.push(i);
+          state.idx++;
+          if(state.idx<questions.length) showQuestion();
+          else {
+            state.finished=true;
+            send({type:'answers', answers:state.myAnswers});
+            $('options').innerHTML='';
+            $('qText').textContent='Selesai!';
+            $('waitPartner').classList.remove('hidden');
+            tryShowResult();
+          }
+        };
+        box.appendChild(div);
+      });
+    }
+
+    function tryShowResult(){
+      if(!state.finished || !state.partnerAnswers) return;
+      // Compare answers
+      let same=0;
+      for(let i=0;i<questions.length;i++){
+        if(state.myAnswers[i]===state.partnerAnswers[i]) same++;
+      }
+      const score=Math.round((same/questions.length)*100);
+      // boost a bit for fun if high agreement
+      const finalScore=Math.min(98, Math.max(40, score + (same>=6?8:same>=4?4:0)));
+
+      $('coupleNames').textContent=`${state.myName}  +  ${state.partnerName}`;
+      $('scorePct').textContent=finalScore+'%';
+      $('scoreCircle').style.background=`conic-gradient(#ff6b9d ${finalScore}%, #2d2640 0%)`;
+
+      let title='', desc='';
+      if(finalScore>=90){ title='Soulmate Vibes 💖'; desc='Jawaban kalian sangat mirip. Chemistry-nya kuat!'; }
+      else if(finalScore>=75){ title='Very Compatible 💕'; desc='Banyak kesamaan. Jaga komunikasi biar makin solid.'; }
+      else if(finalScore>=55){ title='Good Match ✨'; desc='Cukup cocok. Perbedaan bisa jadi pelengkap.'; }
+      else { title='Growing Together 🌱'; desc='Masih banyak yang berbeda. Yang penting mau berusaha bareng.'; }
+      $('scoreTitle').textContent=title;
+      $('scoreDesc').textContent=desc;
+      $('quiz').classList.add('hidden');
+      $('result').classList.remove('hidden');
+    }
+
+    $('btnCreate').onclick=()=>{
+      state.myName=$('myName').value.trim()||'Player1';
+      state.isHost=true;
+      if(state.peer) try{state.peer.destroy();}catch(_){}
+      const code=generateCode();
+      state.peer=new Peer(code,{debug:1});
+      state.peer.on('open',id=>{
+        $('roomCode').value=id; $('roomBox').classList.remove('hidden'); $('joinBox').classList.add('hidden');
+        setStatus('Room siap. Bagikan code.','ok');
+      });
+      state.peer.on('connection',c=>setupConn(c));
+      state.peer.on('error',err=>{
+        if(err.type==='unavailable-id') setTimeout(()=>$('btnCreate').click(),400);
+        else setStatus('Error: '+(err.type||err),'err');
+      });
+    };
+    $('btnJoinShow').onclick=()=>{ $('joinBox').classList.remove('hidden'); $('roomBox').classList.add('hidden'); };
+    $('btnJoin').onclick=()=>{
+      const code=$('joinCode').value.trim().toUpperCase();
+      if(!code) return alert('Masukkan code');
+      state.myName=$('myName').value.trim()||'Player2';
+      state.isHost=false;
+      if(state.peer) try{state.peer.destroy();}catch(_){}
+      state.peer=new Peer({debug:1});
+      state.peer.on('open',()=>{
+        setupConn(state.peer.connect(code,{reliable:true}));
+        $('roomBox').classList.remove('hidden'); $('roomCode').value=code;
+        setStatus('Menghubungkan...','info');
+      });
+      state.peer.on('error',err=>setStatus('Gagal: '+(err.type||err),'err'));
+    };
+    $('btnCopy').onclick=()=>navigator.clipboard.writeText($('roomCode').value).then(()=>setStatus('Code dicopy!','ok'));
+  </script>
+</body>
+</html>

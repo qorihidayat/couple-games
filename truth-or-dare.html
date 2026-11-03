@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Truth or Dare (LDR) — Couple Games</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0c15; --card: #1a1525; --accent: #ff9f43; --accent2: #ff6b6b;
+      --text: #f0eef5; --muted: #9b93a8; --border: #2d2640; --ok: #2ecc71;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      background-image: radial-gradient(ellipse at 30% 10%, rgba(255,159,67,0.1), transparent 50%);
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap;
+    }
+    header a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    header h1 { font-size: 1.15rem; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+    input[type="text"] {
+      width: 100%; background: #12101a; border: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px; border-radius: 10px; font-size: 0.95rem;
+    }
+    input:focus { outline: 2px solid var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 14px; border-radius: 10px; border: none; font-weight: 700;
+      cursor: pointer; font-size: 0.9rem; transition: 0.15s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #111; }
+    .btn-secondary { background: #2d2640; color: var(--text); }
+    .btn-block { width: 100%; }
+    .btn-truth { background: #4ecdc4; color: #0a2a28; flex: 1; padding: 18px; font-size: 1.2rem; font-weight: 800; border-radius: 14px; border: none; cursor: pointer; }
+    .btn-dare { background: #ff6b6b; color: #2a0a0a; flex: 1; padding: 18px; font-size: 1.2rem; font-weight: 800; border-radius: 14px; border: none; cursor: pointer; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .status { font-size: 0.8rem; padding: 8px 10px; border-radius: 8px; margin-top: 10px; }
+    .status.ok { background: rgba(46,204,113,0.15); color: var(--ok); }
+    .status.info { background: rgba(255,159,67,0.12); color: var(--accent); }
+    .status.err { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+    .players { display: flex; gap: 10px; margin-bottom: 14px; }
+    .player-box {
+      flex: 1; background: #12101a; border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; text-align: center;
+    }
+    .player-box.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,159,67,0.25); }
+    .player-box .name { font-weight: 700; }
+    .player-box .role { font-size: 0.7rem; color: var(--muted); }
+    .level-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .level-btn {
+      flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border);
+      background: #12101a; color: var(--text); font-weight: 600; cursor: pointer;
+    }
+    .level-btn.active { background: var(--accent); border-color: var(--accent); color: #111; }
+    .result {
+      background: #12101a; border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px 18px; min-height: 140px; text-align: center;
+      display: flex; flex-direction: column; justify-content: center; gap: 10px;
+    }
+    .result .type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; }
+    .result .prompt { font-size: 1.15rem; font-weight: 600; line-height: 1.45; }
+    .result .for { color: var(--muted); font-size: 0.85rem; }
+    .choice { display: flex; gap: 12px; margin-bottom: 16px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Dashboard</a>
+    <h1>🔥 Truth or Dare</h1>
+    <div style="font-size:0.75rem;color:var(--muted);" id="connBadge">Belum terhubung</div>
+  </header>
+
+  <div class="wrap">
+    <div id="lobby">
+      <div class="card">
+        <div class="section-title">Multiplayer LDR</div>
+        <label style="font-size:0.8rem;color:var(--muted);">Nama kamu</label>
+        <input type="text" id="myName" placeholder="Nama" value="Player1" style="margin-bottom:10px;" />
+        <div class="row">
+          <button class="btn btn-primary btn-block" id="btnCreate">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinShow">Join</button>
+        </div>
+        <div id="roomBox" class="hidden" style="margin-top:12px;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Room Code (kirim ke pasangan)</div>
+          <div class="row">
+            <input type="text" id="roomCode" readonly style="font-family:monospace;font-weight:800;letter-spacing:2px;text-align:center;" />
+            <button class="btn btn-secondary" id="btnCopy">Copy</button>
+          </div>
+          <div id="roomStatus" class="status info">Menunggu pasangan...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:12px;">
+          <input type="text" id="joinCode" placeholder="Masukkan code 6 huruf" maxlength="8" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:8px;" />
+          <button class="btn btn-primary btn-block" id="btnJoin">Masuk Room</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="game" class="hidden">
+      <div class="players">
+        <div class="player-box" id="p1box">
+          <div class="name" id="p1name">—</div>
+          <div class="role" id="p1role">Host</div>
+        </div>
+        <div class="player-box" id="p2box">
+          <div class="name" id="p2name">—</div>
+          <div class="role" id="p2role">Guest</div>
+        </div>
+      </div>
+
+      <div class="level-row">
+        <button class="level-btn active" data-level="soft">Soft</button>
+        <button class="level-btn" data-level="medium">Medium</button>
+        <button class="level-btn" data-level="spicy">Spicy</button>
+      </div>
+
+      <div class="choice" id="choiceRow">
+        <button class="btn-truth" id="btnTruth">Truth</button>
+        <button class="btn-dare" id="btnDare">Dare</button>
+      </div>
+
+      <div class="result" id="result">
+        <div class="type">Siap?</div>
+        <div class="prompt">Tunggu giliran atau pilih Truth / Dare</div>
+        <div class="for"></div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn btn-secondary btn-block" id="btnSkip">Skip / Ganti Prompt</button>
+        <button class="btn btn-primary btn-block" id="btnNext">Next Turn →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let prompts = { soft: { truth: [], dare: [] }, medium: { truth: [], dare: [] }, spicy: { truth: [], dare: [] } };
+
+    // Load questions from external JSON (easy to edit)
+    fetch('questions-tod.json')
+      .then(r => r.json())
+      .then(data => { prompts = data; console.log('ToD questions loaded'); })
+      .catch(err => console.warn('Gagal load questions-tod.json, pakai default', err));
+
+    const state = {
+      peer: null, conn: null, isHost: false, connected: false,
+      myName: 'Player1', partnerName: 'Partner',
+      level: 'soft', turnIsMe: true, lastType: null, lastPrompt: null
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function setStatus(msg, type = 'info') {
+      const el = $('roomStatus');
+      if (!el) return;
+      el.className = 'status ' + type;
+      el.textContent = msg;
+    }
+
+    function generateCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let c = '';
+      for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      return c;
+    }
+
+    function updatePlayersUI() {
+      $('p1name').textContent = state.isHost ? state.myName : state.partnerName;
+      $('p2name').textContent = state.isHost ? state.partnerName : state.myName;
+      $('p1role').textContent = state.isHost ? 'Host (kamu)' : 'Host';
+      $('p2role').textContent = state.isHost ? 'Guest' : 'Guest (kamu)';
+      const myTurn = state.turnIsMe;
+      if (state.isHost) {
+        $('p1box').classList.toggle('active', myTurn);
+        $('p2box').classList.toggle('active', !myTurn);
+      } else {
+        $('p1box').classList.toggle('active', !myTurn);
+        $('p2box').classList.toggle('active', myTurn);
+      }
+      $('choiceRow').style.opacity = myTurn ? '1' : '0.4';
+      $('btnTruth').disabled = !myTurn;
+      $('btnDare').disabled = !myTurn;
+      $('connBadge').textContent = state.connected ? '● Connected' : '○ Offline';
+      $('connBadge').style.color = state.connected ? '#2ecc71' : 'var(--muted)';
+    }
+
+    function send(data) {
+      if (state.conn && state.connected) state.conn.send(data);
+    }
+
+    function showPrompt(type, prompt, forName) {
+      state.lastType = type;
+      state.lastPrompt = prompt;
+      $('result').innerHTML = `
+        <div class="type">${type.toUpperCase()} • ${state.level}</div>
+        <div class="prompt">${prompt}</div>
+        <div class="for">Untuk: <strong>${forName}</strong></div>
+      `;
+    }
+
+    function pickPrompt(type) {
+      const list = prompts[state.level][type];
+      let p = list[Math.floor(Math.random() * list.length)];
+      if (list.length > 1 && p === state.lastPrompt) p = list[Math.floor(Math.random() * list.length)];
+      return p;
+    }
+
+    function setupConn(conn) {
+      state.conn = conn;
+      conn.on('open', () => {
+        state.connected = true;
+        setStatus('Terhubung!', 'ok');
+        send({ type: 'hello', name: state.myName });
+        $('lobby').classList.add('hidden');
+        $('game').classList.remove('hidden');
+        updatePlayersUI();
+      });
+      conn.on('data', data => {
+        if (data.type === 'hello') {
+          state.partnerName = data.name;
+          setStatus(data.name + ' bergabung!', 'ok');
+          updatePlayersUI();
+        } else if (data.type === 'prompt') {
+          state.level = data.level;
+          document.querySelectorAll('.level-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.level === data.level);
+          });
+          showPrompt(data.promptType, data.prompt, data.forName);
+          state.turnIsMe = false;
+          updatePlayersUI();
+        } else if (data.type === 'next') {
+          state.turnIsMe = true;
+          updatePlayersUI();
+          $('result').innerHTML = `<div class="type">Giliran kamu</div><div class="prompt">Pilih Truth atau Dare</div><div class="for"></div>`;
+        } else if (data.type === 'level') {
+          state.level = data.level;
+          document.querySelectorAll('.level-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.level === data.level);
+          });
+        }
+      });
+      conn.on('close', () => {
+        state.connected = false;
+        setStatus('Koneksi terputus', 'err');
+        updatePlayersUI();
+      });
+    }
+
+    document.querySelectorAll('.level-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.level = btn.dataset.level;
+        send({ type: 'level', level: state.level });
+      };
+    });
+
+    $('btnTruth').onclick = () => {
+      if (!state.turnIsMe) return;
+      const prompt = pickPrompt('truth');
+      showPrompt('truth', prompt, state.myName);
+      send({ type: 'prompt', promptType: 'truth', prompt, forName: state.myName, level: state.level });
+    };
+    $('btnDare').onclick = () => {
+      if (!state.turnIsMe) return;
+      const prompt = pickPrompt('dare');
+      showPrompt('dare', prompt, state.myName);
+      send({ type: 'prompt', promptType: 'dare', prompt, forName: state.myName, level: state.level });
+    };
+
+    $('btnNext').onclick = () => {
+      state.turnIsMe = false;
+      updatePlayersUI();
+      send({ type: 'next' });
+      $('result').innerHTML = `<div class="type">Giliran pasangan</div><div class="prompt">Menunggu...</div><div class="for"></div>`;
+    };
+
+    $('btnSkip').onclick = () => {
+      if (!state.turnIsMe || !state.lastType) return;
+      const prompt = pickPrompt(state.lastType);
+      showPrompt(state.lastType, prompt, state.myName);
+      send({ type: 'prompt', promptType: state.lastType, prompt, forName: state.myName, level: state.level });
+    };
+
+    $('btnCreate').onclick = () => {
+      state.myName = $('myName').value.trim() || 'Player1';
+      state.isHost = true;
+      state.turnIsMe = true;
+      if (state.peer) try { state.peer.destroy(); } catch(_){}
+      const code = generateCode();
+      state.peer = new Peer(code, { debug: 1 });
+      state.peer.on('open', id => {
+        $('roomCode').value = id;
+        $('roomBox').classList.remove('hidden');
+        $('joinBox').classList.add('hidden');
+        setStatus('Room siap. Bagikan code ke pasangan.', 'ok');
+      });
+      state.peer.on('connection', conn => setupConn(conn));
+      state.peer.on('error', err => {
+        if (err.type === 'unavailable-id') setTimeout(() => $('btnCreate').click(), 400);
+        else setStatus('Error: ' + (err.type || err), 'err');
+      });
+    };
+
+    $('btnJoinShow').onclick = () => {
+      $('joinBox').classList.remove('hidden');
+      $('roomBox').classList.add('hidden');
+    };
+
+    $('btnJoin').onclick = () => {
+      const code = $('joinCode').value.trim().toUpperCase();
+      if (!code) return alert('Masukkan code');
+      state.myName = $('myName').value.trim() || 'Player2';
+      state.isHost = false;
+      state.turnIsMe = false;
+      if (state.peer) try { state.peer.destroy(); } catch(_){}
+      state.peer = new Peer({ debug: 1 });
+      state.peer.on('open', () => {
+        const conn = state.peer.connect(code, { reliable: true });
+        setupConn(conn);
+        $('roomBox').classList.remove('hidden');
+        $('roomCode').value = code;
+        setStatus('Menghubungkan...', 'info');
+      });
+      state.peer.on('error', err => setStatus('Gagal: ' + (err.type || err), 'err'));
+    };
+
+    $('btnCopy').onclick = () => {
+      navigator.clipboard.writeText($('roomCode').value).then(() => setStatus('Code dicopy!', 'ok'));
+    };
+  </script>
+</body>
+</html>

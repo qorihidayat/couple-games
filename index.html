@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>With U Games — Main Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f0c15;
+      --card: #1a1525;
+      --accent: #ff6b9d;
+      --accent2: #c44dff;
+      --text: #f0eef5;
+      --muted: #9b93a8;
+      --border: #2d2640;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(255, 107, 157, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(196, 77, 255, 0.1) 0%, transparent 50%);
+    }
+    header {
+      text-align: center;
+      padding: 56px 20px 36px;
+      position: relative;
+    }
+    header .hearts {
+      font-size: 1.4rem;
+      opacity: 0.5;
+      margin-bottom: 8px;
+      letter-spacing: 6px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    header h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ff6b9d 0%, #ff8fb7 40%, #c44dff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    header h1 .heart {
+      -webkit-text-fill-color: #ff6b9d;
+      display: inline-block;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    header .subtitle {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 1.08rem;
+      font-weight: 500;
+    }
+    header .divider {
+      width: 64px;
+      height: 3px;
+      margin: 20px auto 0;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #ff6b9d, #c44dff);
+      opacity: 0.7;
+    }
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 22px;
+      text-decoration: none;
+      color: inherit;
+      transition: 0.25s;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent);
+      box-shadow: 0 16px 40px rgba(255, 107, 157, 0.15);
+    }
+    .card .icon {
+      font-size: 2.6rem;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      flex: 1;
+    }
+    .card .tag {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 107, 157, 0.15);
+      color: var(--accent);
+    }
+    .card.dub .tag { background: rgba(108, 92, 231, 0.2); color: #a29bfe; }
+    .card.tod .tag { background: rgba(255, 159, 67, 0.2); color: #ff9f43; }
+    .card.know .tag { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+    .card.love .tag { background: rgba(255, 107, 157, 0.2); color: #ff6b9d; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hearts" aria-hidden="true">💕</div>
+    <h1>To Gellyna <span class="heart">💕</span></h1>
+    <p class="subtitle">Main bareng with U</p>
+    <div class="divider"></div>
+  </header>
+
+  <div class="grid">
+    <!-- 1. Simple Dub Studio -->
+    <a href="dub.html" class="card dub">
+      <div class="icon">🎤</div>
+      <h2>Simple Dub Studio</h2>
+      <p>Import voice pack ZIP, rekam suara bareng, dan dubbing scene favorit kalian berdua.</p>
+      <span class="tag">Multiplayer 2P</span>
+    </a>
+
+    <!-- 2. Truth or Dare -->
+    <a href="truth-or-dare.html" class="card tod">
+      <div class="icon">🔥</div>
+      <h2>Truth or Dare</h2>
+      <p>Klasik tapi seru. Pilih Truth atau Dare, ada level G-rated sampai Spicy. Cocok buat pasangan.</p>
+      <span class="tag">LDR Ready</span>
+    </a>
+
+    <!-- 3. How Well Do You Know Me -->
+    <a href="know-me.html" class="card know">
+      <div class="icon">🧠</div>
+      <h2>How Well Do You Know Me</h2>
+      <p>Satu orang jawab pertanyaan tentang dirinya, yang lain menebak. Siapa yang lebih kenal?</p>
+      <span class="tag">LDR Ready</span>
+    </a>
+
+    <!-- 4. Love Match -->
+    <a href="love-match.html" class="card love">
+      <div class="icon">💕</div>
+      <h2>Love Match</h2>
+      <p>Jawab pertanyaan bareng, lalu lihat seberapa cocok kalian. Ada skor kompatibilitas di akhir.</p>
+      <span class="tag">LDR Ready</span>
+    </a>
+
+    <!-- 5. GeoGuess -->
+    <a href="geoguess.html" class="card" style="border-color: rgba(59,130,246,0.35);">
+      <div class="icon">🌍</div>
+      <h2>GeoGuess Couple</h2>
+      <p>Tebak lokasi dari petunjuk di peta. Pilih Indonesia, Asia, atau Global. Siapa yang lebih dekat?</p>
+      <span class="tag" style="background:rgba(59,130,246,0.2);color:#93c5fd;">LDR Ready</span>
+    </a>
+  </div>
+
+  <footer>
+    With U Games • By Aiden
+  </footer>
+</body>
+</html>

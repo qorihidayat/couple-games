@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoGuess Couple — Couple Games</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220; --card: #141c2e; --accent: #3b82f6; --accent2: #22d3ee;
+      --text: #e8eef8; --muted: #8b9bb4; --border: #243044; --ok: #22c55e; --err: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 8px; flex-wrap: wrap;
+    }
+    header a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    header h1 { font-size: 1.1rem; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+    input[type="text"] { width: 100%; background: #0d1524; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 8px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: #243044; color: var(--text); }
+    .btn-ok { background: var(--ok); color: #052e16; }
+    .btn-block { width: 100%; }
+    .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .status { font-size: 0.8rem; padding: 8px 10px; border-radius: 8px; margin-top: 10px; }
+    .status.ok { background: rgba(34,197,94,0.15); color: var(--ok); }
+    .status.info { background: rgba(59,130,246,0.12); color: #93c5fd; }
+    .status.err { background: rgba(248,113,113,0.15); color: var(--err); }
+    .hidden { display: none !important; }
+    .region-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .region-btn { flex: 1; min-width: 100px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: #0d1524; color: var(--text); font-weight: 600; cursor: pointer; }
+    .region-btn.active { border-color: var(--accent); background: rgba(59,130,246,0.2); color: #93c5fd; }
+    #map { height: 380px; border-radius: 12px; border: 1px solid var(--border); background: #0d1524; }
+    .hint-box { background: #0d1524; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; text-align: center; }
+    .hint-box .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .hint-box .hint { font-size: 1.15rem; font-weight: 700; }
+    .score-line { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 0.9rem; }
+    .players { display: flex; gap: 10px; margin-bottom: 12px; }
+    .player-box { flex: 1; background: #0d1524; border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+    .player-box .name { font-weight: 700; }
+    .player-box .meta { font-size: 0.75rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Dashboard</a>
+    <h1>🌍 GeoGuess Couple</h1>
+    <div style="font-size:0.75rem;color:var(--muted);" id="connBadge">Offline</div>
+  </header>
+
+  <div class="wrap">
+    <!-- LOBBY -->
+    <div id="lobby">
+      <div class="card">
+        <div class="section-title">Multiplayer LDR</div>
+        <input type="text" id="myName" placeholder="Nama kamu" value="Player1" />
+        <div class="row">
+          <button class="btn btn-primary btn-block" id="btnCreate">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinShow">Join</button>
+        </div>
+        <div id="roomBox" class="hidden" style="margin-top:12px;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Room Code</div>
+          <div class="row">
+            <input type="text" id="roomCode" readonly style="font-family:monospace;font-weight:800;letter-spacing:2px;text-align:center;" />
+            <button class="btn btn-secondary" id="btnCopy">Copy</button>
+          </div>
+          <div id="roomStatus" class="status info">Menunggu pasangan...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:12px;">
+          <input type="text" id="joinCode" placeholder="Code 6 huruf" maxlength="8" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;" />
+          <button class="btn btn-primary btn-block" id="btnJoin" style="margin-top:8px;">Masuk Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="game" class="hidden">
+      <div class="players">
+        <div class="player-box">
+          <div class="name" id="p1name">—</div>
+          <div class="meta" id="p1meta">Host</div>
+        </div>
+        <div class="player-box">
+          <div class="name" id="p2name">—</div>
+          <div class="meta" id="p2meta">Guest</div>
+        </div>
+      </div>
+
+      <div class="card" id="setupCard">
+        <div class="section-title">Pilih wilayah (Host)</div>
+        <div class="region-row">
+          <button class="region-btn active" data-region="indonesia">Indonesia</button>
+          <button class="region-btn" data-region="asia">Asia</button>
+          <button class="region-btn" data-region="global">Global</button>
+        </div>
+        <button class="btn btn-primary btn-block" id="btnStartRound" style="margin-top:8px;">Mulai Ronde</button>
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:10px;">Kamu dapat petunjuk, lalu taruh pin di peta. Yang paling dekat menang ronde.</p>
+      </div>
+
+      <div id="playArea" class="hidden">
+        <div class="hint-box">
+          <div class="label">Petunjuk lokasi</div>
+          <div class="hint" id="hintText">—</div>
+        </div>
+        <div id="map"></div>
+        <div class="row" style="margin-top:12px;">
+          <button class="btn btn-secondary btn-block" id="btnClearPin">Hapus Pin</button>
+          <button class="btn btn-ok btn-block" id="btnLockGuess" disabled>Kunci Tebakan</button>
+        </div>
+        <div id="roundStatus" class="status info hidden"></div>
+        <div class="score-line">
+          <span>Skor kamu: <strong id="myScore">0</strong></span>
+          <span>Skor lawan: <strong id="theirScore">0</strong></span>
+        </div>
+      </div>
+
+      <div id="resultCard" class="card hidden" style="margin-top:12px;">
+        <div class="section-title">Hasil ronde</div>
+        <div id="resultText" style="line-height:1.5;"></div>
+        <button class="btn btn-primary btn-block" id="btnNextRound" style="margin-top:12px;">Ronde Berikutnya</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let locations = { indonesia: [], asia: [], global: [] };
+    fetch('locations.json').then(r => r.json()).then(d => { locations = d; }).catch(e => console.warn(e));
+
+    const state = {
+      peer: null, conn: null, isHost: false, connected: false,
+      myName: 'Player1', partnerName: 'Partner',
+      region: 'indonesia',
+      current: null, // {name, lat, lng, hint}
+      myGuess: null, // {lat, lng}
+      partnerGuess: null,
+      myLocked: false, partnerLocked: false,
+      myScore: 0, theirScore: 0,
+      map: null, myMarker: null, partnerMarker: null, answerMarker: null, line: null
+    };
+
+    const $ = id => document.getElementById(id);
+    function setStatus(msg, type='info'){ const el=$('roomStatus'); if(el){ el.className='status '+type; el.textContent=msg; } }
+    function generateCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+    function send(d){ if(state.conn && state.connected) state.conn.send(d); }
+    function updateBadge(){ $('connBadge').textContent=state.connected?'● Connected':'○ Offline'; $('connBadge').style.color=state.connected?'#22c55e':'var(--muted)'; }
+
+    function haversine(lat1,lng1,lat2,lng2){
+      const R=6371, toRad=x=>x*Math.PI/180;
+      const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+      const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+      return 2*R*Math.asin(Math.sqrt(a));
+    }
+
+    function initMap(){
+      if(state.map) return;
+      state.map = L.map('map').setView([0, 110], 3);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18, attribution: '© OpenStreetMap'
+      }).addTo(state.map);
+      state.map.on('click', e => {
+        if(state.myLocked || !state.current) return;
+        placeMyGuess(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function placeMyGuess(lat, lng){
+      state.myGuess = { lat, lng };
+      if(state.myMarker) state.map.removeLayer(state.myMarker);
+      state.myMarker = L.marker([lat, lng], { title: 'Tebakanmu' }).addTo(state.map);
+      $('btnLockGuess').disabled = false;
+    }
+
+    function setupConn(conn){
+      state.conn = conn;
+      conn.on('open', () => {
+        state.connected = true; setStatus('Terhubung!','ok'); updateBadge();
+        send({ type:'hello', name: state.myName });
+        $('lobby').classList.add('hidden');
+        $('game').classList.remove('hidden');
+        updatePlayers();
+        if(!state.isHost){
+          $('setupCard').querySelector('.section-title').textContent = 'Menunggu Host memilih wilayah & mulai...';
+          $('btnStartRound').classList.add('hidden');
+          document.querySelectorAll('.region-btn').forEach(b => b.disabled = true);
+        }
+        setTimeout(() => { initMap(); state.map.invalidateSize(); }, 200);
+      });
+      conn.on('data', data => {
+        if(data.type==='hello'){ state.partnerName=data.name; setStatus(data.name+' bergabung!','ok'); updatePlayers(); }
+        else if(data.type==='round'){
+          startRoundLocal(data.location, data.region);
+        }
+        else if(data.type==='guess'){
+          state.partnerGuess = data.guess;
+          state.partnerLocked = true;
+          checkBothLocked();
+        }
+        else if(data.type==='region'){
+          state.region = data.region;
+          document.querySelectorAll('.region-btn').forEach(b => b.classList.toggle('active', b.dataset.region===data.region));
+        }
+      });
+      conn.on('close', () => { state.connected=false; updateBadge(); setStatus('Terputus','err'); });
+    }
+
+    function updatePlayers(){
+      $('p1name').textContent = state.isHost ? state.myName : state.partnerName;
+      $('p2name').textContent = state.isHost ? state.partnerName : state.myName;
+      $('p1meta').textContent = state.isHost ? 'Host (kamu)' : 'Host';
+      $('p2meta').textContent = state.isHost ? 'Guest' : 'Guest (kamu)';
+      $('myScore').textContent = state.myScore;
+      $('theirScore').textContent = state.theirScore;
+    }
+
+    function startRoundLocal(loc, region){
+      state.current = loc;
+      state.region = region;
+      state.myGuess = null; state.partnerGuess = null;
+      state.myLocked = false; state.partnerLocked = false;
+      if(state.myMarker){ state.map.removeLayer(state.myMarker); state.myMarker=null; }
+      if(state.partnerMarker){ state.map.removeLayer(state.partnerMarker); state.partnerMarker=null; }
+      if(state.answerMarker){ state.map.removeLayer(state.answerMarker); state.answerMarker=null; }
+      if(state.line){ state.map.removeLayer(state.line); state.line=null; }
+      $('hintText').textContent = loc.hint || 'Tebak lokasinya!';
+      $('playArea').classList.remove('hidden');
+      $('resultCard').classList.add('hidden');
+      $('btnLockGuess').disabled = true;
+      $('roundStatus').classList.add('hidden');
+      // zoom map depending on region
+      if(region==='indonesia') state.map.setView([-2, 118], 5);
+      else if(region==='asia') state.map.setView([20, 100], 3);
+      else state.map.setView([20, 20], 2);
+      setTimeout(() => state.map.invalidateSize(), 100);
+    }
+
+    function checkBothLocked(){
+      if(state.myLocked && state.partnerLocked){
+        revealResult();
+      } else if(state.myLocked){
+        $('roundStatus').classList.remove('hidden');
+        $('roundStatus').className = 'status info';
+        $('roundStatus').textContent = 'Tebakan terkunci. Menunggu pasangan...';
+      }
+    }
+
+    function revealResult(){
+      const ans = state.current;
+      const dMine = haversine(state.myGuess.lat, state.myGuess.lng, ans.lat, ans.lng);
+      const dTheirs = haversine(state.partnerGuess.lat, state.partnerGuess.lng, ans.lat, ans.lng);
+
+      // points: closer is better. Max ~5000 for <1km, decay
+      const pts = dist => Math.max(0, Math.round(5000 * Math.exp(-dist / 1500)));
+      const myPts = pts(dMine);
+      const theirPts = pts(dTheirs);
+      state.myScore += myPts;
+      state.theirScore += theirPts;
+      updatePlayers();
+
+      // markers
+      if(state.partnerMarker) state.map.removeLayer(state.partnerMarker);
+      state.partnerMarker = L.circleMarker([state.partnerGuess.lat, state.partnerGuess.lng], { radius: 8, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.9 }).addTo(state.map).bindPopup('Lawan');
+      state.answerMarker = L.circleMarker([ans.lat, ans.lng], { radius: 10, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }).addTo(state.map).bindPopup(ans.name);
+      state.map.fitBounds([
+        [state.myGuess.lat, state.myGuess.lng],
+        [state.partnerGuess.lat, state.partnerGuess.lng],
+        [ans.lat, ans.lng]
+      ], { padding: [40, 40] });
+
+      const winner = dMine < dTheirs ? 'Kamu lebih dekat!' : dMine > dTheirs ? 'Pasangan lebih dekat!' : 'Seri!';
+      $('resultText').innerHTML = `
+        <strong>${ans.name}</strong><br><br>
+        Jarak kamu: <strong>${dMine.toFixed(0)} km</strong> (+${myPts} pts)<br>
+        Jarak lawan: <strong>${dTheirs.toFixed(0)} km</strong> (+${theirPts} pts)<br><br>
+        ${winner}
+      `;
+      $('resultCard').classList.remove('hidden');
+      $('roundStatus').classList.add('hidden');
+      // only host shows next for simplicity, both can click
+      if(!state.isHost) $('btnNextRound').textContent = 'Siap ronde berikutnya (tunggu Host)';
+    }
+
+    // Region buttons
+    document.querySelectorAll('.region-btn').forEach(btn => {
+      btn.onclick = () => {
+        if(!state.isHost) return;
+        document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.region = btn.dataset.region;
+        send({ type: 'region', region: state.region });
+      };
+    });
+
+    $('btnStartRound').onclick = () => {
+      if(!state.isHost) return;
+      const pool = locations[state.region] || locations.indonesia;
+      if(!pool.length) return alert('Lokasi belum termuat, coba sebentar lagi');
+      const loc = pool[Math.floor(Math.random() * pool.length)];
+      send({ type: 'round', location: loc, region: state.region });
+      startRoundLocal(loc, state.region);
+    };
+
+    $('btnNextRound').onclick = () => {
+      if(state.isHost) $('btnStartRound').click();
+      else {
+        $('resultCard').classList.add('hidden');
+        $('roundStatus').classList.remove('hidden');
+        $('roundStatus').textContent = 'Menunggu Host memulai ronde...';
+      }
+    };
+
+    $('btnClearPin').onclick = () => {
+      if(state.myLocked) return;
+      state.myGuess = null;
+      if(state.myMarker){ state.map.removeLayer(state.myMarker); state.myMarker=null; }
+      $('btnLockGuess').disabled = true;
+    };
+
+    $('btnLockGuess').onclick = () => {
+      if(!state.myGuess || state.myLocked) return;
+      state.myLocked = true;
+      $('btnLockGuess').disabled = true;
+      send({ type: 'guess', guess: state.myGuess });
+      checkBothLocked();
+    };
+
+    // Room
+    $('btnCreate').onclick = () => {
+      state.myName = $('myName').value.trim() || 'Player1';
+      state.isHost = true;
+      if(state.peer) try{ state.peer.destroy(); }catch(_){}
+      const code = generateCode();
+      state.peer = new Peer(code, { debug: 1 });
+      state.peer.on('open', id => {
+        $('roomCode').value = id; $('roomBox').classList.remove('hidden'); $('joinBox').classList.add('hidden');
+        setStatus('Room siap. Bagikan code.','ok');
+      });
+      state.peer.on('connection', c => setupConn(c));
+      state.peer.on('error', err => {
+        if(err.type==='unavailable-id') setTimeout(() => $('btnCreate').click(), 400);
+        else setStatus('Error: '+(err.type||err),'err');
+      });
+    };
+    $('btnJoinShow').onclick = () => { $('joinBox').classList.remove('hidden'); $('roomBox').classList.add('hidden'); };
+    $('btnJoin').onclick = () => {
+      const code = $('joinCode').value.trim().toUpperCase();
+      if(!code) return alert('Masukkan code');
+      state.myName = $('myName').value.trim() || 'Player2';
+      state.isHost = false;
+      if(state.peer) try{ state.peer.destroy(); }catch(_){}
+      state.peer = new Peer({ debug: 1 });
+      state.peer.on('open', () => {
+        setupConn(state.peer.connect(code, { reliable: true }));
+        $('roomBox').classList.remove('hidden'); $('roomCode').value = code;
+        setStatus('Menghubungkan...','info');
+      });
+      state.peer.on('error', err => setStatus('Gagal: '+(err.type||err),'err'));
+    };
+    $('btnCopy').onclick = () => navigator.clipboard.writeText($('roomCode').value).then(() => setStatus('Code dicopy!','ok'));
+  </script>
+</body>
+</html>
