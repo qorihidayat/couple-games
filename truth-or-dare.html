@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Truth or Dare (LDR) — Couple Games</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="peer-config.js"></script>
   <style>
     :root {
       --bg: #0f0c15; --card: #1a1525; --accent: #ff9f43; --accent2: #ff6b6b;
@@ -254,6 +255,11 @@
         setStatus('Koneksi terputus', 'err');
         updatePlayersUI();
       });
+      conn.on('error', err => {
+        state.connected = false;
+        setStatus('Koneksi terganggu: ' + (err.type || err), 'err');
+        updatePlayersUI();
+      });
     }
 
     document.querySelectorAll('.level-btn').forEach(btn => {
@@ -298,7 +304,8 @@
       state.turnIsMe = true;
       if (state.peer) try { state.peer.destroy(); } catch(_){}
       const code = generateCode();
-      state.peer = new Peer(code, { debug: 1 });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(code, pConfig);
       state.peer.on('open', id => {
         $('roomCode').value = id;
         $('roomBox').classList.remove('hidden');
@@ -324,7 +331,8 @@
       state.isHost = false;
       state.turnIsMe = false;
       if (state.peer) try { state.peer.destroy(); } catch(_){}
-      state.peer = new Peer({ debug: 1 });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(pConfig);
       state.peer.on('open', () => {
         const conn = state.peer.connect(code, { reliable: true });
         setupConn(conn);

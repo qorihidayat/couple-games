@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoGuess Couple — Couple Games</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="peer-config.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -210,6 +211,7 @@
         }
       });
       conn.on('close', () => { state.connected=false; updateBadge(); setStatus('Terputus','err'); });
+      conn.on('error', err => { state.connected=false; updateBadge(); setStatus('Koneksi terganggu: '+(err.type||err),'err'); });
     }
 
     function updatePlayers(){
@@ -338,7 +340,8 @@
       state.isHost = true;
       if(state.peer) try{ state.peer.destroy(); }catch(_){}
       const code = generateCode();
-      state.peer = new Peer(code, { debug: 1 });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(code, pConfig);
       state.peer.on('open', id => {
         $('roomCode').value = id; $('roomBox').classList.remove('hidden'); $('joinBox').classList.add('hidden');
         setStatus('Room siap. Bagikan code.','ok');
@@ -356,7 +359,8 @@
       state.myName = $('myName').value.trim() || 'Player2';
       state.isHost = false;
       if(state.peer) try{ state.peer.destroy(); }catch(_){}
-      state.peer = new Peer({ debug: 1 });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(pConfig);
       state.peer.on('open', () => {
         setupConn(state.peer.connect(code, { reliable: true }));
         $('roomBox').classList.remove('hidden'); $('roomCode').value = code;

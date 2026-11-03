@@ -6,6 +6,7 @@
   <title>Simple Dub Studio — 2-Player</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="peer-config.js"></script>
   <style>
     :root {
       --bg: #0f1117;
@@ -1010,9 +1011,8 @@
       state.roomId = shortCode;
 
       // PeerJS allows custom ID (must be unique)
-      state.peer = new Peer(shortCode, {
-        debug: 1
-      });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(shortCode, pConfig);
 
       state.peer.on('open', id => {
         state.peerId = id;
@@ -1054,7 +1054,8 @@
       state.connected = false;
 
       // Guest also gets a random peer ID, then connects to host's short code
-      state.peer = new Peer({ debug: 1 });
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(pConfig);
       state.peer.on('open', () => {
         state.conn = state.peer.connect(code, { reliable: true });
         setupPeerHandlers(state.conn);
