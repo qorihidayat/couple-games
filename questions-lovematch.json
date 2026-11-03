@@ -1,34 +1,146 @@
 [
   {
     "q": "Gaya kencan ideal kalian?",
-    "opts": ["Nonton di rumah + makan enak", "Petualangan outdoor", "Cafe + jalan-jalan kota", "Surprise & spontan"]
+    "opts": [
+      "Nonton di rumah + makan enak",
+      "Petualangan outdoor",
+      "Cafe + jalan-jalan kota",
+      "Surprise & spontan"
+    ]
   },
   {
     "q": "Kalau lagi bertengkar, biasanya?",
-    "opts": ["Langsung ngomongin", "Butuh waktu sendiri dulu", "Pakai humor biar cair", "Tulis pesan panjang"]
+    "opts": [
+      "Langsung ngomongin",
+      "Butuh waktu sendiri dulu",
+      "Pakai humor biar cair",
+      "Tulis pesan panjang"
+    ]
   },
   {
     "q": "Bahasa cinta yang paling penting?",
-    "opts": ["Waktu berkualitas", "Sentuhan fisik", "Kata-kata afirmasi", "Hadiah / perbuatan"]
+    "opts": [
+      "Waktu berkualitas",
+      "Sentuhan fisik",
+      "Kata-kata afirmasi",
+      "Hadiah / perbuatan"
+    ]
   },
   {
     "q": "Liburan impian berdua?",
-    "opts": ["Pantai & resort", "Gunung & alam", "Kota besar luar negeri", "Staycation di hotel bagus"]
+    "opts": [
+      "Pantai & resort",
+      "Gunung & alam",
+      "Kota besar luar negeri",
+      "Staycation di hotel bagus"
+    ]
   },
   {
     "q": "Seberapa penting kesamaan hobi?",
-    "opts": ["Sangat penting", "Cukup penting", "Tidak terlalu", "Yang penting saling support"]
+    "opts": [
+      "Sangat penting",
+      "Cukup penting",
+      "Tidak terlalu",
+      "Yang penting saling support"
+    ]
   },
   {
     "q": "Rencana masa depan yang paling menarik?",
-    "opts": ["Nikah & keluarga", "Travel the world", "Bangun karir bareng", "Hidup tenang & stabil"]
+    "opts": [
+      "Nikah & keluarga",
+      "Travel the world",
+      "Bangun karir bareng",
+      "Hidup tenang & stabil"
+    ]
   },
   {
     "q": "Kalau salah satu lagi down, yang lain biasanya?",
-    "opts": ["Dampingi & dengerin", "Kasih solusi praktis", "Bikin dia ketawa", "Kasih ruang dulu"]
+    "opts": [
+      "Dampingi & dengerin",
+      "Kasih solusi praktis",
+      "Bikin dia ketawa",
+      "Kasih ruang dulu"
+    ]
   },
   {
     "q": "Yang paling bikin hubungan awet?",
-    "opts": ["Komunikasi jujur", "Kepercayaan", "Saling tumbuh", "Romance yang dijaga"]
+    "opts": [
+      "Komunikasi jujur",
+      "Kepercayaan",
+      "Saling tumbuh",
+      "Romance yang dijaga"
+    ]
+  },
+  {
+    "q": "Love language utama yang paling bikin merasa dicintai dan dihargai?",
+    "opts": [
+      "Quality Time (Menghabiskan waktu luang dan fokus berdua)",
+      "Words of Affirmation (Apresiasi, pujian, & kata-kata hangat)",
+      "Physical Touch & Presence (Kehadiran dan kedekatan fisik)",
+      "Acts of Service / Gifts (Perhatian lewat aksi nyata & kejutan)"
+    ]
+  },
+  {
+    "q": "Akhir Desember nanti Saa mau ke Jakarta dan lo pas lagi cuti. Rencana meetup ideal versi kalian?",
+    "opts": [
+      "Nongkrong santai di cafe quiet, deep talk tanpa terburu-buru",
+      "Jalan-jalan eksplor kuliner dan tempat hits di Jakarta",
+      "Nonton/staycation santai tanpa schedule yang padat",
+      "Spontan aja yang penting akhirnya bisa tatap muka langsung"
+    ]
+  },
+  {
+    "q": "Kalau Nunung (si kucing) mendadak butuh perhatian pas kalian lagi asyik ngobrol/mabar?",
+    "opts": [
+      "Pause dulu acaranya, Nunung adalah prioritas utama!",
+      "Ngobrol lanjut terus sambil ngelus dan ngajak main Nunung",
+      "Nunung disuruh bobo dulu biar kalian bisa fokus quality time",
+      "Bikin Nunung jadi bahan taruhan/becandaan pas mabar"
+    ]
+  },
+  {
+    "q": "Sebagai anak dari keluarga 2 bersaudara, peran atau kebiasaan kalian dalam hubungan itu biasanya?",
+    "opts": [
+      "Suka mengayomi, tenang, dan jadi pelindung",
+      "Manja, suka diperhatiin, tapi tetep pengertian",
+      "Mandiri dan punya ruang sendiri yang tegas",
+      "Fleksibel mengikuti dinamika pasangan"
+    ]
+  },
+  {
+    "q": "Kalau pasangan lagi burnout atau kumat overthinking-nya, bentuk penanganan yang paling diharapkan?",
+    "opts": [
+      "Kasih ruang pribadi dulu tanpa diinterogasi",
+      "Kirim pesan hangat (Words of Affirmation) buat meyakinkan",
+      "Tetap ada dan dampingi sampai emosinya stabil",
+      "Ajak bercanda/mabar buat ngalihin pikiran"
+    ]
+  },
+  {
+    "q": "Gimana cara kalian menyikapi ketakutan kehilangan satu sama lain?",
+    "opts": [
+      "Saling memberi penegasan tulus tanpa janji muluk",
+      "Ngomong jujur apa adanya meskipun terasa canggung",
+      "Narik diri sebentar buat menenangkan emosi",
+      "Minta kepastian status secepatnya"
+    ]
+  },
+  {
+    "q": "Pandangan kalian soal 'ruang pribadi' dan kata kebebasan dalam hubungan?",
+    "opts": [
+      "Bebas banget, yang penting saling percaya dan paham batasan",
+      "Butuh kejelasan: bebas bukan berarti gak peduli",
+      "Selalu kabar-kabari setiap ada perubahan aktivitas",
+      "Kebebasan itu penting, tapi pasangan tetap prioritas"
+    ]
+  },
+  {
+    "q": "Apa tolok ukur paling utama buat menilai kecocokan kalian saat nanti ketemu di Jakarta?",
+    "opts": [
+      "Chemistry dan kenyamanan saat tatap muka di dunia nyata",
+      "Kesesuaian nilai hidup (values) dan visi masa depan",
+      "Keterikatan emosional dan rasa saling membutuhkan",
+      "Kemampuan buat saling melengkapi kekurangan satu sama lain"
+    ]
   }
 ]
