@@ -35,11 +35,11 @@
     .hidden { display: none !important; }
     .q-num { font-size: 0.75rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
     .q-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; line-height: 1.4; }
-    .score-big { font-size: 3rem; font-weight: 800; text-align: center; background: linear-gradient(135deg,#2ecc71,#1abc9c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .result-list { list-style: none; margin-top: 14px; }
-    .result-list li { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; background: #12101a; font-size: 0.88rem; }
-    .result-list li.correct { border-left: 3px solid #2ecc71; }
-    .result-list li.wrong { border-left: 3px solid #ff6b6b; }
+    .score-big { font-size: 3rem; font-weight: 800; text-align: center; background: linear-gradient(135deg,#2ecc71,#1abc9c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .result-list { list-style: none; margin-top: 14px; padding: 0; }
+    .result-list li { padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; background: #12101a; border: 1px solid var(--border); font-size: 0.9rem; }
+    .result-list li.correct { border-left: 4px solid var(--ok); background: rgba(46,204,113,0.08); }
+    .result-list li.wrong { border-left: 4px solid var(--err); background: rgba(255,107,107,0.06); }
     .role-pick { display: flex; gap: 10px; margin: 12px 0; }
     .role-pick button { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: #12101a; color: var(--text); font-weight: 700; cursor: pointer; }
     .role-pick button.active { border-color: var(--accent); background: rgba(46,204,113,0.15); }
@@ -114,13 +114,25 @@
     let selected = [];
     function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 
+    function pickQuestions(){
+      if (questions.length) {
+        selected = shuffle(questions).slice(0, Math.min(7, questions.length));
+        console.log('Selected questions picked:', selected.length);
+      }
+    }
+
     // Load questions from external JSON (easy to edit)
     fetch('questions-knowme.json')
       .then(r => r.json())
       .then(data => {
         questions = data;
-        selected = shuffle(questions).slice(0, Math.min(7, questions.length));
-        console.log('KnowMe questions loaded:', selected.length);
+        console.log('KnowMe questions loaded:', questions.length);
+        if (state.isHost && !selected.length) {
+          pickQuestions();
+          if (state.connected) {
+            send({ type: 'sync_questions', questions: selected });
+          }
+        }
       })
       .catch(err => console.warn('Gagal load questions-knowme.json', err));
 
@@ -143,28 +155,45 @@
       conn.on('open',()=>{
         state.connected=true; setStatus('Terhubung!','ok'); updateBadge();
         send({type:'hello',name:state.myName});
+        if(state.isHost){
+          if(!selected.length) pickQuestions();
+          if(selected.length) send({type:'sync_questions', questions: selected});
+        }
         $('lobby').classList.add('hidden');
         $('roleScreen').classList.remove('hidden');
       });
       conn.on('data', data => {
-        if(data.type==='hello'){ state.partnerName=data.name; setStatus(data.name+' bergabung!','ok'); }
+        if(data.type==='hello'){
+          state.partnerName=data.name;
+          setStatus(data.name+' bergabung!','ok');
+          if(state.isHost){
+            if(!selected.length) pickQuestions();
+            if(selected.length) send({type:'sync_questions', questions: selected});
+          }
+        }
+        else if(data.type==='sync_questions'){
+          if(data.questions && data.questions.length){
+            selected = data.questions;
+            console.log('Questions synced with Host:', selected.length);
+          }
+        }
         else if(data.type==='role'){
           state.partnerRole=data.role;
           checkRoles();
         }
         else if(data.type==='answer'){
-          state.partnerAnswers[data.idx]=data.answer;
-          if(state.phase==='answer' && state.isSubject===false){
-            // we are waiting for subject answers? actually subject sends all then we guess
+          if(data.questions && data.questions.length){
+            selected = data.questions;
           }
-          // if we are guesser and subject finished answering
           if(data.done){
             state.partnerAnswers=data.answers;
             startGuessing();
           }
         }
         else if(data.type==='guess'){
-          state.partnerAnswers[data.idx]=data.answer; // reuse for guesses when we are subject
+          if(data.questions && data.questions.length){
+            selected = data.questions;
+          }
           if(data.done){
             state.partnerAnswers=data.answers;
             showResult();
@@ -187,7 +216,12 @@
         state.isSubject = state.role==='subject';
         $('roleScreen').classList.add('hidden');
         $('playScreen').classList.remove('hidden');
-        if (!selected.length && questions.length) selected = shuffle(questions).slice(0, Math.min(7, questions.length));
+
+        if(state.isHost){
+          if(!selected.length) pickQuestions();
+          send({type:'sync_questions', questions: selected});
+        }
+
         if(state.isSubject){
           state.phase='answer';
           state.idx=0;
@@ -225,15 +259,15 @@
 
     $('btnSubmit').onclick=()=>{
       const ans=$('answer').value.trim();
-      if(!ans) return alert('Isi dulu');
+      if(!ans) return alert('Isi dulu jawabannya');
       if(state.phase==='answer'){
         state.myAnswers.push(ans);
         state.idx++;
         if(state.idx<selected.length){
           showQuestion();
         } else {
-          // done answering, send all to partner
-          send({type:'answer', done:true, answers:state.myAnswers});
+          // done answering, send all to partner along with the questions array
+          send({type:'answer', done:true, answers:state.myAnswers, questions: selected});
           $('phaseLabel').textContent='Selesai jawab. Menunggu Guesser menebak...';
           $('qText').textContent='Tunggu hasilnya ya';
           $('answer').classList.add('hidden');
@@ -246,27 +280,27 @@
         if(state.idx<selected.length){
           showQuestion();
         } else {
-          send({type:'guess', done:true, answers:state.myAnswers});
-          // partnerAnswers currently holds subject answers
+          send({type:'guess', done:true, answers:state.myAnswers, questions: selected});
           showResult();
         }
       }
     };
 
     function normalize(s){return (s||'').toLowerCase().replace(/[^a-z0-9\u00C0-\u024F]/g,'').trim();}
-    function showResult(){
-      // subject answers vs guesser answers
-      let subjectAns, guesserAns;
-      if(state.isSubject){
-        subjectAns = state.myAnswers; // wait, when subject, myAnswers was answers, partnerAnswers was guesses
-        // After subject finishes, myAnswers = subject answers
-        // When guesser finishes, partner sends guesses → state.partnerAnswers = guesses
-        // But when we are subject we overwrote? Let's fix:
-        // Better: keep separate.
+
+    function checkAnswerMatch(s, g){
+      const normS = normalize(s);
+      const normG = normalize(g);
+      if(!normS || !normG) return false;
+      if(normS === normG) return true;
+      if(normS.length >= 3 && normG.length >= 3){
+        if(normS.includes(normG) || normG.includes(normS)) return true;
       }
-      // Simpler approach using current state:
-      // If I am subject: myAnswers = my subject answers, partnerAnswers = guesser guesses (after done)
-      // If I am guesser: partnerAnswers = subject answers, myAnswers = my guesses
+      return false;
+    }
+
+    function showResult(){
+      let subjectAns, guesserAns;
       if(state.isSubject){
         subjectAns = state.myAnswers;
         guesserAns = state.partnerAnswers;
@@ -274,22 +308,38 @@
         subjectAns = state.partnerAnswers;
         guesserAns = state.myAnswers;
       }
-      let score=0;
-      const list=$('resultList'); list.innerHTML='';
-      selected.forEach((q,i)=>{
-        const s=subjectAns[i]||'—';
-        const g=guesserAns[i]||'—';
-        const ok = normalize(s)===normalize(g) || normalize(s).includes(normalize(g)) || normalize(g).includes(normalize(s));
+
+      const subjectName = state.isSubject ? state.myName : state.partnerName;
+      const guesserName = state.isSubject ? state.partnerName : state.myName;
+
+      let score = 0;
+      const list = $('resultList'); 
+      list.innerHTML = '';
+      selected.forEach((q, i) => {
+        const s = (subjectAns && subjectAns[i] !== undefined) ? subjectAns[i] : '—';
+        const g = (guesserAns && guesserAns[i] !== undefined) ? guesserAns[i] : '—';
+        const ok = checkAnswerMatch(s, g);
         if(ok) score++;
-        const li=document.createElement('li');
-        li.className=ok?'correct':'wrong';
-        li.innerHTML=`<strong>${q}</strong><br>Jawaban: ${s}<br>Tebakan: ${g} ${ok?'✅':'❌'}`;
+        const li = document.createElement('li');
+        li.className = ok ? 'correct' : 'wrong';
+        li.innerHTML = `
+          <div style="font-weight:700;margin-bottom:8px;color:var(--text);display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <span>#${i+1}. ${q}</span>
+            <span style="font-size:0.8rem;padding:2px 8px;border-radius:6px;background:${ok?'rgba(46,204,113,0.2)':'rgba(255,107,107,0.2)'};color:${ok?'var(--ok)':'var(--err)'};font-weight:700;white-space:nowrap;">
+              ${ok ? '✅ Benar' : '❌ Meleset'}
+            </span>
+          </div>
+          <div style="font-size:0.88rem;line-height:1.6;color:var(--muted);">
+            <div><strong style="color:var(--text);">${subjectName} (Jawaban Asli):</strong> ${s}</div>
+            <div><strong style="color:var(--text);">${guesserName} (Tebakan):</strong> ${g}</div>
+          </div>
+        `;
         list.appendChild(li);
       });
-      $('scoreBig').textContent=`${score}/${selected.length}`;
-      const pct=Math.round(score/selected.length*100);
-      let msg=pct>=85?'Sangat saling kenal! 💚':pct>=60?'Cukup kenal ✨':pct>=40?'Masih banyak yang harus dipelajari 👀':'Waktunya lebih banyak ngobrol 💬';
-      $('scoreMsg').textContent=msg;
+      $('scoreBig').textContent = `${score}/${selected.length}`;
+      const pct = selected.length ? Math.round(score / selected.length * 100) : 0;
+      let msg = pct >= 85 ? 'Sangat saling kenal! 💚' : pct >= 60 ? 'Cukup kenal ✨' : pct >= 40 ? 'Masih banyak yang harus dipelajari 👀' : 'Waktunya lebih banyak ngobrol 💬';
+      $('scoreMsg').textContent = msg;
       $('playScreen').classList.add('hidden');
       $('resultScreen').classList.remove('hidden');
     }
@@ -312,6 +362,7 @@
     $('btnCreate').onclick=()=>{
       state.myName=$('myName').value.trim()||'Player1';
       state.isHost=true;
+      pickQuestions();
       if(state.peer) try{state.peer.destroy();}catch(_){}
       const code=generateCode();
       const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
