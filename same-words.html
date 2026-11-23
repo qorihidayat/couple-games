@@ -704,14 +704,22 @@
           Chemistry dan telepati kalian top banget! 💕
         `;
 
-        const btnNextCat = document.createElement('button');
-        btnNextCat.className = 'btn btn-pink btn-block';
-        btnNextCat.textContent = 'Main Kategori Lain 🌟';
-        btnNextCat.onclick = () => {
-          send({ type: 'change_category' });
-          showCategoryScreen();
-        };
-        actionRow.appendChild(btnNextCat);
+        if (state.isHost) {
+          const btnNextCat = document.createElement('button');
+          btnNextCat.className = 'btn btn-pink btn-block';
+          btnNextCat.textContent = 'Main Kategori Lain 🌟';
+          btnNextCat.onclick = () => {
+            send({ type: 'change_category' });
+            showCategoryScreen();
+          };
+          actionRow.appendChild(btnNextCat);
+        } else {
+          const waitDiv = document.createElement('div');
+          waitDiv.className = 'status ok';
+          waitDiv.style.marginTop = '10px';
+          waitDiv.textContent = '🎉 Yeay berhasil! Menunggu host memilih kategori berikutnya...';
+          actionRow.appendChild(waitDiv);
+        }
 
       } else {
         // MISMATCH (Kurang Cocok)
@@ -761,25 +769,33 @@
             Sayang sekali belum cocok setelah 10 percobaan. Jangan menyerah, coba lagi yuk!
           `;
 
-          const btnRetry = document.createElement('button');
-          btnRetry.className = 'btn btn-primary btn-block';
-          btnRetry.textContent = 'Ulangi Kategori Ini 🔁';
-          btnRetry.onclick = () => {
-            send({ type: 'start_game', category: state.category });
-            startNewGame(state.isHost);
-          };
+          if (state.isHost) {
+            const btnRetry = document.createElement('button');
+            btnRetry.className = 'btn btn-primary btn-block';
+            btnRetry.textContent = 'Ulangi Kategori Ini 🔁';
+            btnRetry.onclick = () => {
+              send({ type: 'start_game', category: state.category });
+              startNewGame(state.isHost);
+            };
 
-          const btnNewCat = document.createElement('button');
-          btnNewCat.className = 'btn btn-secondary btn-block';
-          btnNewCat.style.marginTop = '8px';
-          btnNewCat.textContent = 'Ganti Kategori Baru 🏷️';
-          btnNewCat.onclick = () => {
-            send({ type: 'change_category' });
-            showCategoryScreen();
-          };
+            const btnNewCat = document.createElement('button');
+            btnNewCat.className = 'btn btn-secondary btn-block';
+            btnNewCat.style.marginTop = '8px';
+            btnNewCat.textContent = 'Ganti Kategori Baru 🏷️';
+            btnNewCat.onclick = () => {
+              send({ type: 'change_category' });
+              showCategoryScreen();
+            };
 
-          actionRow.appendChild(btnRetry);
-          actionRow.appendChild(btnNewCat);
+            actionRow.appendChild(btnRetry);
+            actionRow.appendChild(btnNewCat);
+          } else {
+            const waitDiv = document.createElement('div');
+            waitDiv.className = 'status info';
+            waitDiv.style.marginTop = '10px';
+            waitDiv.textContent = 'Kesempatan habis! Menunggu host memilih tindakan selanjutnya...';
+            actionRow.appendChild(waitDiv);
+          }
         }
       }
     }
