@@ -964,8 +964,27 @@
       reader.readAsArrayBuffer(blob);
     }
 
+    const net = CoupleNet.bind({
+      gameKey: 'dub-studio',
+      getState: () => state,
+      onSetupConn: setupPeerHandlers,
+      onSyncSend: () => ({
+        currentIndex: state.currentIndex,
+        roomId: state.roomId
+      }),
+      onSyncReceive: (snapshot) => {
+        if (!snapshot) return;
+        if (snapshot.currentIndex !== undefined && snapshot.currentIndex >= 0) {
+          state.currentIndex = snapshot.currentIndex;
+          renderClipList();
+          updateButtons();
+        }
+      }
+    });
+
     function setupPeerHandlers(conn) {
       conn.on('data', data => {
+        if (net.filterData(data, conn)) return;
         if (data.type === 'take') {
           const blob = new Blob([data.data], { type: data.mime || 'audio/webm' });
           const url = URL.createObjectURL(blob);
@@ -985,17 +1004,20 @@
         }
       });
       conn.on('open', () => {
+        net.handleConnectionOpen(conn);
         state.connected = true;
         setStatus($('roomStatus'), 'Terhubung!', 'ok');
         conn.send({ type: 'hello', name: state.myName });
         updatePlayersUI();
       });
       conn.on('close', () => {
+        net.triggerDisconnect();
         state.connected = false;
         setStatus($('roomStatus'), 'Koneksi terputus', 'err');
         updatePlayersUI();
       });
       conn.on('error', err => {
+        net.triggerDisconnect();
         setStatus($('roomStatus'), 'Error koneksi: ' + (err.type || err), 'err');
       });
     }
@@ -1013,9 +1035,11 @@
       // PeerJS allows custom ID (must be unique)
       const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
       state.peer = new Peer(shortCode, pConfig);
+      net.bindPeerEvents(state.peer);
 
       state.peer.on('open', id => {
         state.peerId = id;
+        state.roomId = id;
         $('roomCodeDisplay').value = id;
         $('roomInfo').classList.remove('hidden');
         $('joinBox').classList.add('hidden');
@@ -1049,6 +1073,7 @@
       let code = $('joinCodeInput').value.trim().toUpperCase();
       if (!code) return alert('Masukkan room code (6 huruf)');
       state.myName = $('playerName').value.trim() || 'Player2';
+      state.roomId = code;
       if (state.peer) { try { state.peer.destroy(); } catch(_){} }
       state.isHost = false;
       state.connected = false;
@@ -1056,6 +1081,7 @@
       // Guest also gets a random peer ID, then connects to host's short code
       const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
       state.peer = new Peer(pConfig);
+      net.bindPeerEvents(state.peer);
       state.peer.on('open', () => {
         state.conn = state.peer.connect(code, { reliable: true });
         setupPeerHandlers(state.conn);
@@ -1068,6 +1094,36 @@
         setStatus($('roomStatus'), 'Gagal connect: ' + (err.type || err.message || err), 'err');
       });
     };
+
+    CoupleNet.checkResume('dub-studio', sess => {
+      $('playerName').value = sess.myName || 'Player1';
+      state.myName = sess.myName || 'Player1';
+      state.roomId = sess.roomCode;
+      if (sess.isHost) {
+        state.isHost = true;
+        if (state.peer) try { state.peer.destroy(); } catch(_){}
+        const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+        state.peer = new Peer(sess.roomCode, pConfig);
+        net.bindPeerEvents(state.peer);
+        state.peer.on('open', id => {
+          state.peerId = id;
+          state.roomId = id;
+          $('roomCodeDisplay').value = id;
+          $('roomInfo').classList.remove('hidden');
+          $('joinBox').classList.add('hidden');
+          setStatus($('roomStatus'), 'Room dipulihkan. Menunggu teman...', 'ok');
+          updatePlayersUI();
+        });
+        state.peer.on('connection', conn => {
+          state.conn = conn;
+          setupPeerHandlers(conn);
+        });
+      } else {
+        state.isHost = false;
+        $('joinCodeInput').value = sess.roomCode;
+        $('btnConfirmJoin').click();
+      }
+    });
 
     $('btnCopyCode').onclick = () => {
       const code = $('roomCodeDisplay').value;

@@ -1,0 +1,83 @@
+[
+  {
+    "name": "Hewan",
+    "icon": "🐾",
+    "hint": "Sebutkan satu nama hewan yang langsung muncul di pikiran kalian!"
+  },
+  {
+    "name": "Makanan Indonesia",
+    "icon": "🍲",
+    "hint": "Makanan khas Indonesia yang paling populer atau sering kalian makan!"
+  },
+  {
+    "name": "Minuman Favorit",
+    "icon": "🧋",
+    "hint": "Minuman yang paling segar atau sering dipesan saat nongkrong!"
+  },
+  {
+    "name": "Buah-buahan",
+    "icon": "🍎",
+    "hint": "Sebutkan satu jenis buah yang paling manis atau segar!"
+  },
+  {
+    "name": "Tempat Kencan / Date",
+    "icon": "🎡",
+    "hint": "Tempat jalan-jalan atau kencan yang paling seru buat kalian berdua!"
+  },
+  {
+    "name": "Benda di Kamar Tidur",
+    "icon": "🛏️",
+    "hint": "Benda yang pasti ada di dalam kamar tidur!"
+  },
+  {
+    "name": "Warna",
+    "icon": "🎨",
+    "hint": "Sebutkan satu warna dasar atau warna favorit!"
+  },
+  {
+    "name": "Kota di Indonesia",
+    "icon": "🏙️",
+    "hint": "Nama kota di Indonesia yang terkenal atau ingin kalian kunjungi!"
+  },
+  {
+    "name": "Film / Serial Populer",
+    "icon": "🎬",
+    "hint": "Judul film, anime, atau series yang terkenal!"
+  },
+  {
+    "name": "Aktivitas Weekend",
+    "icon": "🎮",
+    "hint": "Kegiatan santai yang paling asyik dilakukan pas hari libur!"
+  },
+  {
+    "name": "Makanan Manis / Dessert",
+    "icon": "🍰",
+    "hint": "Camilan manis yang bikin mood langsung naik!"
+  },
+  {
+    "name": "Hal yang Bikin Kangen",
+    "icon": "💌",
+    "hint": "Hal atau kebiasaan dari pasangan yang paling bikin rindu!"
+  },
+  {
+    "name": "Profesi / Pekerjaan",
+    "icon": "💼",
+    "hint": "Sebutkan satu nama pekerjaan atau profesi!"
+  },
+  {
+    "name": "Kendaraan",
+    "icon": "🚗",
+    "hint": "Alat transportasi yang sering digunakan sehari-hari!"
+  },
+  {
+    "name": "Genre Musik",
+    "icon": "🎵",
+    "hint": "Jenis musik yang sering kalian dengarkan!"
+  },
+  {
+    "name": "Emosi / Perasaan",
+    "icon": "💖",
+    "hint": "Satu kata perasaan atau suasana hati yang paling positif!"
+  }
+]
+

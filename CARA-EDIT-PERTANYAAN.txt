@@ -2,7 +2,7 @@
 CARA CUSTOM PERTANYAAN
 ========================================
 
-Ada 3 file JSON yang bisa kamu edit:
+Ada 4 file JSON yang bisa kamu edit:
 
 1. questions-tod.json
    → Truth or Dare
@@ -16,6 +16,16 @@ Ada 3 file JSON yang bisa kamu edit:
 3. questions-lovematch.json
    → Love Match
    → Struktur: array object { "q": "pertanyaan", "opts": ["opsi1", "opsi2", ...] }
+
+4. categories-words.json
+   → Guess Same Words
+   → Struktur: array object { "name": "Nama Kategori", "icon": "Emoji", "hint": "Petunjuk" }
+   → Contoh:
+     {
+       "name": "Makanan Penutup",
+       "icon": "🍰",
+       "hint": "Camilan manis favorit kalian!"
+     }
 
 ----------------------------------------
 CONTOH EDIT (questions-tod.json)

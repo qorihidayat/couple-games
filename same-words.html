@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guess Same Words — Couple Games</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="peer-config.js"></script>
+  <style>
+    :root {
+      --bg: #0f0c15;
+      --card: #1a1525;
+      --card-alt: #130f1c;
+      --accent: #00cec9;
+      --accent-pink: #ff6b9d;
+      --accent-purple: #c44dff;
+      --text: #f0eef5;
+      --muted: #9b93a8;
+      --border: #2d2640;
+      --ok: #2ecc71;
+      --err: #ff6b6b;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(0, 206, 201, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(196, 77, 255, 0.1) 0%, transparent 50%);
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap;
+    }
+    header a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    header a:hover { color: var(--text); }
+    header h1 { font-size: 1.15rem; font-weight: 700; }
+    .wrap { max-width: 580px; margin: 0 auto; padding: 20px 16px 50px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 10px; font-weight: 700;
+    }
+    input[type="text"] {
+      width: 100%; background: #12101a; border: 1px solid var(--border);
+      color: var(--text); padding: 12px 14px; border-radius: 12px;
+      font-size: 1rem; margin-bottom: 10px; transition: 0.2s;
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 16px; border-radius: 12px; border: none;
+      font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: 0.2s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, #00cec9, #6c5ce7); color: #fff; }
+    .btn-pink { background: linear-gradient(135deg, #ff6b9d, #c44dff); color: #fff; }
+    .btn-secondary { background: #2d2640; color: var(--text); }
+    .btn-secondary:hover { background: #372f4e; }
+    .btn-block { width: 100%; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .status {
+      font-size: 0.85rem; padding: 10px 12px; border-radius: 10px; margin-top: 10px; line-height: 1.4;
+    }
+    .status.ok { background: rgba(46,204,113,0.15); color: var(--ok); }
+    .status.info { background: rgba(0,206,201,0.12); color: var(--accent); }
+    .status.warn { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .status.err { background: rgba(255,107,107,0.15); color: var(--err); }
+    .hidden { display: none !important; }
+
+    /* Category selector */
+    .cat-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px; margin: 14px 0; max-height: 280px; overflow-y: auto; padding-right: 4px;
+    }
+    .cat-btn {
+      background: var(--card-alt); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 8px; text-align: center;
+      cursor: pointer; color: var(--text); font-size: 0.85rem; font-weight: 600;
+      transition: 0.2s; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .cat-btn .cat-icon { font-size: 1.5rem; }
+    .cat-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .cat-btn.active {
+      border-color: var(--accent); background: rgba(0,206,201,0.15);
+      color: #70fff9; box-shadow: 0 0 12px rgba(0,206,201,0.2);
+    }
+    .active-cat-box {
+      background: rgba(0, 206, 201, 0.08); border: 1px solid rgba(0, 206, 201, 0.25);
+      border-radius: 14px; padding: 14px; margin: 12px 0; text-align: center;
+    }
+    .active-cat-box .title { font-size: 1.15rem; font-weight: 800; color: #70fff9; margin-bottom: 4px; }
+    .active-cat-box .hint { font-size: 0.85rem; color: var(--muted); }
+
+    /* Players banner */
+    .players-bar {
+      display: flex; gap: 10px; margin-bottom: 14px;
+    }
+    .player-card {
+      flex: 1; background: var(--card-alt); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 12px; text-align: center;
+    }
+    .player-card .p-name { font-weight: 700; font-size: 0.95rem; }
+    .player-card .p-status { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .player-card.locked { border-color: var(--ok); background: rgba(46,204,113,0.08); }
+    .player-card.locked .p-status { color: var(--ok); font-weight: 600; }
+
+    /* Attempts tracker */
+    .attempts-box {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; padding: 10px 14px; background: var(--card-alt);
+      border-radius: 12px; border: 1px solid var(--border);
+    }
+    .attempts-dots {
+      display: flex; gap: 5px; flex-wrap: wrap;
+    }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%; background: #2d2640;
+      border: 1px solid #43395c; transition: 0.2s;
+    }
+    .dot.miss { background: var(--err); border-color: #ff9191; }
+    .dot.match { background: var(--ok); border-color: #7affb1; }
+    .dot.current { background: var(--accent); border-color: #8afff9; animation: pulse 1.2s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+    }
+
+    /* Comparison Display */
+    .result-banner {
+      border-radius: 16px; padding: 22px 18px; text-align: center; margin-bottom: 16px;
+      animation: fadeIn 0.3s ease-out;
+    }
+    .result-banner.miss {
+      background: rgba(255, 107, 107, 0.1); border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+    .result-banner.match {
+      background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.4);
+    }
+    .result-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; }
+    .result-banner.miss .result-title { color: #ff8585; }
+    .result-banner.match .result-title { color: #5effa3; }
+
+    .words-paired {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 12px; font-size: 1.35rem; font-weight: 800; padding: 10px 18px;
+      border-radius: 12px; background: #12101a; border: 1px solid var(--border);
+      letter-spacing: 0.5px; margin: 10px 0; max-width: 100%; flex-wrap: wrap;
+    }
+    .words-paired .plus { color: var(--accent-pink); font-size: 1.2rem; }
+    .words-paired.matched-words {
+      border-color: var(--ok); color: #7affb1; background: rgba(46,204,113,0.12);
+    }
+
+    /* Attempt History List */
+    .history-list {
+      list-style: none; padding: 0; margin-top: 10px; max-height: 220px; overflow-y: auto;
+    }
+    .history-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-radius: 10px; background: var(--card-alt);
+      border: 1px solid var(--border); margin-bottom: 8px; font-size: 0.9rem;
+    }
+    .history-item.match { border-left: 4px solid var(--ok); background: rgba(46,204,113,0.06); }
+    .history-item.miss { border-left: 4px solid var(--err); }
+    .history-num { font-size: 0.78rem; color: var(--muted); font-weight: 700; width: 60px; }
+    .history-words { flex: 1; font-weight: 600; text-align: center; }
+    .history-badge { font-size: 0.8rem; font-weight: 700; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← Dashboard</a>
+    <h1>💬 Guess Same Words</h1>
+    <div style="font-size:0.75rem;color:var(--muted);" id="connBadge">Offline</div>
+  </header>
+
+  <div class="wrap">
+    <!-- 1. LOBBY SCREEN -->
+    <div id="lobby">
+      <div class="card">
+        <div class="section-title">Multiplayer LDR (2 Player)</div>
+        <input type="text" id="myName" placeholder="Nama kamu" value="Player1" />
+        <div class="row">
+          <button class="btn btn-primary btn-block" id="btnCreate">Buat Room</button>
+          <button class="btn btn-secondary btn-block" id="btnJoinShow">Join</button>
+        </div>
+        <div id="roomBox" class="hidden" style="margin-top:12px;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">Room Code</div>
+          <div class="row">
+            <input type="text" id="roomCode" readonly style="font-family:monospace;font-weight:800;letter-spacing:2px;text-align:center;" />
+            <button class="btn btn-secondary" id="btnCopy">Copy</button>
+          </div>
+          <div id="roomStatus" class="status info">Menunggu pasangan masuk room...</div>
+        </div>
+        <div id="joinBox" class="hidden" style="margin-top:12px;">
+          <input type="text" id="joinCode" placeholder="Code 6 huruf" maxlength="8" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;" />
+          <button class="btn btn-primary btn-block" id="btnJoin" style="margin-top:8px;">Masuk Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. CATEGORY PICK SCREEN -->
+    <div id="catScreen" class="hidden">
+      <div class="card">
+        <div class="section-title">Pilih Kategori Permainan</div>
+        <div id="hostPickArea">
+          <p style="font-size:0.88rem;color:var(--muted);">
+            Pilih kategori dari daftar di bawah atau tekan tombol acak. Tebak kata yang sama dalam maksimal 10 percobaan!
+          </p>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn btn-secondary btn-block" id="btnRandomCat">🎲 Kategori Acak</button>
+          </div>
+
+          <div class="cat-grid" id="catGrid"></div>
+
+          <div style="margin-top:8px;">
+            <div class="section-title">Atau Ketik Kategori Sendiri:</div>
+            <input type="text" id="customCatInput" placeholder="Contoh: Barang Kenangan Kita, Tempat Makan Favorit..." />
+          </div>
+
+          <div class="active-cat-box" id="activeCatPreview">
+            <div class="title" id="previewCatTitle">🐾 Hewan</div>
+            <div class="hint" id="previewCatHint">Sebutkan satu nama hewan yang langsung muncul di pikiran kalian!</div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="btnStartGame" style="margin-top:14px; font-size:1.05rem;">
+            Mulai Permainan 🚀
+          </button>
+        </div>
+
+        <div id="guestWaitingArea" class="hidden" style="text-align:center; padding:20px 10px;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">⏳</div>
+          <h3 style="font-size:1.15rem; margin-bottom:6px;">Menunggu Host</h3>
+          <p style="font-size:0.88rem; color:var(--muted);">Host sedang memilih kategori kata...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. GAMEPLAY SCREEN -->
+    <div id="playScreen" class="hidden">
+      <!-- Active Category Header -->
+      <div class="active-cat-box" style="margin-top:0;">
+        <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); font-weight:700;">Kategori Aktif</div>
+        <div class="title" id="gameCatTitle">🐾 Hewan</div>
+        <div class="hint" id="gameCatHint">Sebutkan satu nama hewan!</div>
+      </div>
+
+      <!-- Attempts Counter -->
+      <div class="attempts-box">
+        <div>
+          <span style="font-size:0.8rem; color:var(--muted); font-weight:700;">PERCOBAAN: </span>
+          <strong id="attemptCounterText" style="color:var(--accent); font-size:1rem;">1 / 10</strong>
+        </div>
+        <div class="attempts-dots" id="dotsContainer"></div>
+      </div>
+
+      <!-- Player Statuses -->
+      <div class="players-bar">
+        <div class="player-card" id="myCard">
+          <div class="p-name" id="myNameDisplay">Kamu</div>
+          <div class="p-status" id="myStatusText">Belum kunci kata</div>
+        </div>
+        <div class="player-card" id="partnerCard">
+          <div class="p-name" id="partnerNameDisplay">Pasangan</div>
+          <div class="p-status" id="partnerStatusText">Sedang berpikir...</div>
+        </div>
+      </div>
+
+      <!-- Comparison Result Banner (shows after both submit) -->
+      <div id="resultBanner" class="result-banner hidden">
+        <div class="result-title" id="resultTitle">Kurang cocok!</div>
+        <div style="font-size:0.85rem; color:var(--muted);" id="resultSub">Kata yang kalian tebak:</div>
+        <div class="words-paired" id="wordsPairDisplay">
+          <span id="resWord1">singa</span>
+          <span class="plus">+</span>
+          <span id="resWord2">bebek</span>
+        </div>
+        <div id="resultMsg" style="font-size:0.9rem; margin-top:8px; line-height:1.4;"></div>
+        <div class="row" style="margin-top:14px;" id="resultActionRow">
+          <button class="btn btn-primary btn-block" id="btnNextAttempt">Lanjut Percobaan Berikutnya 🔄</button>
+        </div>
+      </div>
+
+      <!-- Guess Input Card -->
+      <div class="card" id="inputCard">
+        <div class="section-title">Tebakan Kamu</div>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">
+          Ketik 1 kata yang menurutmu juga dipikirkan pasanganmu. Kata kalian berdua akan dibuka bersamaan!
+        </p>
+        <input type="text" id="myWordInput" placeholder="Ketik kata tebakanmu di sini..." autocomplete="off" />
+        <button class="btn btn-primary btn-block" id="btnLockWord">Kunci Kata 🔒</button>
+        <div id="lockStatus" class="status info hidden"></div>
+      </div>
+
+      <!-- History of attempts in current category -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="section-title" style="margin:0;">Riwayat Percobaan Ronde Ini</div>
+          <span style="font-size:0.75rem; color:var(--muted);" id="historyCount">0 percobaan</span>
+        </div>
+        <ul class="history-list" id="historyList">
+          <li style="text-align:center; color:var(--muted); font-size:0.85rem; padding:12px;">Belum ada tebakan.</li>
+        </ul>
+      </div>
+
+      <!-- Change Category button -->
+      <button class="btn btn-secondary btn-block" id="btnChangeCat" style="margin-top:6px;">
+        ⚙️ Ganti Kategori
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let categories = [];
+    const MAX_ATTEMPTS = 10;
+
+    // Load custom categories from JSON
+    fetch('categories-words.json')
+      .then(r => r.json())
+      .then(data => {
+        categories = data;
+        renderCategoryGrid();
+        if (categories.length > 0) {
+          selectCategory(categories[0]);
+        }
+      })
+      .catch(err => {
+        console.warn('Gagal load categories-words.json, pakai fallback', err);
+        categories = [
+          { name: "Hewan", icon: "🐾", hint: "Sebutkan satu nama hewan!" },
+          { name: "Makanan Indonesia", icon: "🍲", hint: "Makanan khas Indonesia favorit kalian!" },
+          { name: "Minuman Favorit", icon: "🧋", hint: "Minuman segar atau pesanan saat nongkrong!" },
+          { name: "Tempat Kencan", icon: "🎡", hint: "Tempat nge-date paling seru berdua!" },
+          { name: "Warna", icon: "🎨", hint: "Sebutkan satu warna favorit!" }
+        ];
+        renderCategoryGrid();
+        selectCategory(categories[0]);
+      });
+
+    const state = {
+      peer: null, conn: null, isHost: false, connected: false,
+      myName: 'Player1', partnerName: 'Player2',
+      category: { name: 'Hewan', icon: '🐾', hint: 'Sebutkan satu nama hewan!' },
+      attempt: 1,
+      myWord: '',
+      partnerWord: '',
+      myLocked: false,
+      partnerLocked: false,
+      roundOver: false,
+      history: [] // array of { attempt, word1, word2, isMatch, p1, p2 }
+    };
+
+    const $ = id => document.getElementById(id);
+    function setStatus(msg, type='info'){ const el=$('roomStatus'); if(el){ el.className='status '+type; el.textContent=msg; } }
+    function generateCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+    function send(d){ if(state.conn && state.connected) state.conn.send(d); }
+    function updateBadge(){ $('connBadge').textContent=state.connected?'● Connected':'○ Offline'; $('connBadge').style.color=state.connected?'#2ecc71':'var(--muted)'; }
+
+    // Clean word for comparison (lowercase, trimmed, strip excessive symbols)
+    function cleanWord(str){
+      return (str || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s]/gi, '')
+        .replace(/\s+/g, ' ');
+    }
+
+    // Render Categories
+    function renderCategoryGrid(){
+      const grid = $('catGrid');
+      grid.innerHTML = '';
+      categories.forEach((cat, idx) => {
+        const btn = document.createElement('div');
+        btn.className = 'cat-btn' + (idx === 0 ? ' active' : '');
+        btn.innerHTML = `<span class="cat-icon">${cat.icon || '🏷️'}</span><span>${cat.name}</span>`;
+        btn.onclick = () => selectCategory(cat, btn);
+        grid.appendChild(btn);
+      });
+    }
+
+    function selectCategory(cat, btnEl){
+      state.category = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      $('previewCatTitle').textContent = `${cat.icon || '🏷️'} ${cat.name}`;
+      $('previewCatHint').textContent = cat.hint || 'Tebak kata yang sama!';
+      $('customCatInput').value = '';
+    }
+
+    $('btnRandomCat').onclick = () => {
+      if (!categories.length) return;
+      const rand = categories[Math.floor(Math.random() * categories.length)];
+      selectCategory(rand);
+    };
+
+    $('customCatInput').oninput = (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        state.category = {
+          name: val,
+          icon: '✨',
+          hint: 'Kategori kustom: pikirkan kata yang paling cocok!'
+        };
+        $('previewCatTitle').textContent = `✨ ${val}`;
+        $('previewCatHint').textContent = state.category.hint;
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      }
+    };
+
+    // PeerJS Connection Handlers
+    const net = CoupleNet.bind({
+      gameKey: 'same-words',
+      getState: () => state,
+      onSetupConn: setupConn,
+      onSyncSend: () => ({
+        category: state.category,
+        attempt: state.attempt,
+        history: state.history,
+        roundOver: state.roundOver,
+        inGame: !$('playScreen').classList.contains('hidden')
+      }),
+      onSyncReceive: (snapshot) => {
+        if (!snapshot) return;
+        state.category = snapshot.category || state.category;
+        state.attempt = snapshot.attempt || 1;
+        state.history = snapshot.history || [];
+        state.roundOver = !!snapshot.roundOver;
+        if (snapshot.inGame) {
+          $('catScreen').classList.add('hidden');
+          $('lobby').classList.add('hidden');
+          $('playScreen').classList.remove('hidden');
+          $('gameCatTitle').textContent = `${state.category.icon || '🏷️'} ${state.category.name}`;
+          $('gameCatHint').textContent = state.category.hint || 'Tebak kata yang sama!';
+          $('attemptCounterText').textContent = `${state.attempt} / ${MAX_ATTEMPTS}`;
+          renderDots();
+          renderHistory();
+          if (!state.roundOver) {
+            $('inputCard').classList.remove('hidden');
+            $('resultBanner').classList.add('hidden');
+          }
+        }
+      }
+    });
+
+    function setupConn(conn){
+      state.conn = conn;
+      conn.on('open', () => {
+        net.handleConnectionOpen(conn);
+        setStatus('Terhubung!', 'ok');
+        updateBadge();
+        send({ type: 'hello', name: state.myName });
+
+        $('lobby').classList.add('hidden');
+        if ($('playScreen').classList.contains('hidden')) {
+          $('catScreen').classList.remove('hidden');
+        }
+
+        if (state.isHost) {
+          $('hostPickArea').classList.remove('hidden');
+          $('guestWaitingArea').classList.add('hidden');
+        } else {
+          $('hostPickArea').classList.add('hidden');
+          $('guestWaitingArea').classList.remove('hidden');
+        }
+      });
+
+      conn.on('data', data => {
+        if (net.filterData(data, conn)) return;
+        if (data.type === 'hello') {
+          state.partnerName = data.name;
+          setStatus(data.name + ' bergabung!', 'ok');
+          updatePlayerLabels();
+        }
+        else if (data.type === 'start_game') {
+          // Received game start from Host
+          state.category = data.category;
+          startNewGame(false);
+        }
+        else if (data.type === 'guess_locked') {
+          // Partner locked their word
+          state.partnerLocked = true;
+          state.partnerWord = data.word;
+          updateLockUI();
+          checkBothLocked();
+        }
+        else if (data.type === 'next_attempt') {
+          // Proceed to next attempt
+          handleNextAttemptLocal();
+        }
+        else if (data.type === 'change_category') {
+          // Return to category selection
+          showCategoryScreen();
+        }
+      });
+
+      conn.on('close', () => {
+        net.triggerDisconnect();
+        updateBadge();
+        setStatus('Koneksi terputus', 'err');
+      });
+
+      conn.on('error', err => {
+        net.triggerDisconnect();
+        updateBadge();
+        setStatus('Koneksi terganggu: ' + (err.type || err), 'err');
+      });
+    }
+
+    function updatePlayerLabels(){
+      $('myNameDisplay').textContent = state.myName + ' (Kamu)';
+      $('partnerNameDisplay').textContent = state.partnerName;
+    }
+
+    // Host Starts Game
+    $('btnStartGame').onclick = () => {
+      if (!state.isHost) return;
+      send({ type: 'start_game', category: state.category });
+      startNewGame(true);
+    };
+
+    function startNewGame(isHostTrigger){
+      state.attempt = 1;
+      state.history = [];
+      state.roundOver = false;
+
+      $('catScreen').classList.add('hidden');
+      $('playScreen').classList.remove('hidden');
+
+      $('gameCatTitle').textContent = `${state.category.icon || '🏷️'} ${state.category.name}`;
+      $('gameCatHint').textContent = state.category.hint || 'Tebak kata yang sama!';
+
+      updatePlayerLabels();
+      resetAttemptUI();
+      renderHistory();
+    }
+
+    function resetAttemptUI(){
+      state.myWord = '';
+      state.partnerWord = '';
+      state.myLocked = false;
+      state.partnerLocked = false;
+
+      $('attemptCounterText').textContent = `${state.attempt} / ${MAX_ATTEMPTS}`;
+      renderDots();
+
+      // Reset Inputs
+      $('myWordInput').value = '';
+      $('myWordInput').disabled = false;
+      $('btnLockWord').disabled = false;
+      $('inputCard').classList.remove('hidden');
+      $('lockStatus').classList.add('hidden');
+
+      // Reset Player Cards
+      $('myCard').classList.remove('locked');
+      $('myStatusText').textContent = 'Belum kunci kata';
+      $('partnerCard').classList.remove('locked');
+      $('partnerStatusText').textContent = 'Sedang berpikir...';
+
+      // Hide Result Banner
+      $('resultBanner').classList.add('hidden');
+      $('myWordInput').focus();
+    }
+
+    function renderDots(){
+      const container = $('dotsContainer');
+      container.innerHTML = '';
+      for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        const past = state.history.find(h => h.attempt === i);
+        if (past) {
+          dot.className = 'dot ' + (past.isMatch ? 'match' : 'miss');
+        } else if (i === state.attempt) {
+          dot.className = 'dot current';
+        }
+        container.appendChild(dot);
+      }
+    }
+
+    // Lock Word Action
+    $('btnLockWord').onclick = () => {
+      const word = $('myWordInput').value.trim();
+      if (!word) {
+        alert('Ketik kata tebakanmu terlebih dahulu!');
+        $('myWordInput').focus();
+        return;
+      }
+      state.myWord = word;
+      state.myLocked = true;
+
+      $('myWordInput').disabled = true;
+      $('btnLockWord').disabled = true;
+      $('myCard').classList.add('locked');
+      $('myStatusText').textContent = 'Sudah terkunci 🔒';
+
+      $('lockStatus').classList.remove('hidden');
+      $('lockStatus').className = 'status info';
+      $('lockStatus').textContent = `Kata "${word}" terkunci! Menunggu ${state.partnerName} mengunci kata...`;
+
+      // Send locked word to partner
+      send({ type: 'guess_locked', word: word });
+
+      checkBothLocked();
+    };
+
+    // When partner locked
+    function updateLockUI(){
+      if (state.partnerLocked) {
+        $('partnerCard').classList.add('locked');
+        $('partnerStatusText').textContent = 'Sudah terkunci 🔒';
+        if (!state.myLocked) {
+          $('lockStatus').classList.remove('hidden');
+          $('lockStatus').className = 'status warn';
+          $('lockStatus').textContent = `${state.partnerName} sudah mengunci kata! Giliranmu...`;
+        }
+      }
+    }
+
+    // Check if both players have submitted their words
+    function checkBothLocked(){
+      if (state.myLocked && state.partnerLocked) {
+        evaluateAttempt();
+      }
+    }
+
+    function evaluateAttempt(){
+      const wMine = state.myWord.trim();
+      const wPartner = state.partnerWord.trim();
+      const isMatch = cleanWord(wMine) === cleanWord(wPartner);
+
+      // Record to history
+      state.history.push({
+        attempt: state.attempt,
+        word1: wMine,
+        word2: wPartner,
+        isMatch: isMatch,
+        myName: state.myName,
+        partnerName: state.partnerName
+      });
+
+      renderDots();
+      renderHistory();
+
+      // Show Result Banner
+      const banner = $('resultBanner');
+      banner.classList.remove('hidden');
+      $('inputCard').classList.add('hidden');
+
+      $('resWord1').textContent = wMine;
+      $('resWord2').textContent = wPartner;
+
+      const wordsPair = $('wordsPairDisplay');
+      const actionRow = $('resultActionRow');
+      actionRow.innerHTML = '';
+
+      if (isMatch) {
+        // MATCH!
+        state.roundOver = true;
+        banner.className = 'result-banner match';
+        wordsPair.className = 'words-paired matched-words';
+        $('resultTitle').textContent = '🎉 TELEPATI BERHASIL! KATA SAMA! 🎉';
+        $('resultSub').textContent = 'Kalian berdua memikirkan kata yang persis sama:';
+        $('resultMsg').innerHTML = `
+          Luar biasa! Kalian berhasil cocok pada percobaan ke-<strong>${state.attempt}</strong> dari 10.<br>
+          Chemistry dan telepati kalian top banget! 💕
+        `;
+
+        const btnNextCat = document.createElement('button');
+        btnNextCat.className = 'btn btn-pink btn-block';
+        btnNextCat.textContent = 'Main Kategori Lain 🌟';
+        btnNextCat.onclick = () => {
+          send({ type: 'change_category' });
+          showCategoryScreen();
+        };
+        actionRow.appendChild(btnNextCat);
+
+      } else {
+        // MISMATCH (Kurang Cocok)
+        banner.className = 'result-banner miss';
+        wordsPair.className = 'words-paired';
+        $('resultTitle').textContent = 'Kurang cocok! 💭';
+        $('resultSub').textContent = 'Kata yang kalian tebak:';
+
+        if (state.attempt < MAX_ATTEMPTS) {
+          const sisa = MAX_ATTEMPTS - state.attempt;
+          $('resultMsg').innerHTML = `
+            Hasilnya <strong>"${wMine} + ${wPartner}"</strong>.<br>
+            Masih ada <strong>${sisa} kesempatan lagi</strong>. Coba selaraskan pikiran kalian!
+          `;
+
+          const btnNext = document.createElement('button');
+          btnNext.className = 'btn btn-primary btn-block';
+          btnNext.textContent = `Lanjut Percobaan Ke-${state.attempt + 1} 🔄`;
+          btnNext.onclick = () => {
+            send({ type: 'next_attempt' });
+            handleNextAttemptLocal();
+          };
+          actionRow.appendChild(btnNext);
+
+        } else {
+          // Attempts exhausted (10/10)
+          state.roundOver = true;
+          $('resultTitle').textContent = '🥺 Kesempatan Habis (10/10)';
+          $('resultMsg').innerHTML = `
+            Hasil terakhir: <strong>"${wMine} + ${wPartner}"</strong>.<br>
+            Sayang sekali belum cocok setelah 10 percobaan. Jangan menyerah, coba lagi yuk!
+          `;
+
+          const btnRetry = document.createElement('button');
+          btnRetry.className = 'btn btn-primary btn-block';
+          btnRetry.textContent = 'Ulangi Kategori Ini 🔁';
+          btnRetry.onclick = () => {
+            send({ type: 'start_game', category: state.category });
+            startNewGame(state.isHost);
+          };
+
+          const btnNewCat = document.createElement('button');
+          btnNewCat.className = 'btn btn-secondary btn-block';
+          btnNewCat.style.marginTop = '8px';
+          btnNewCat.textContent = 'Ganti Kategori Baru 🏷️';
+          btnNewCat.onclick = () => {
+            send({ type: 'change_category' });
+            showCategoryScreen();
+          };
+
+          actionRow.appendChild(btnRetry);
+          actionRow.appendChild(btnNewCat);
+        }
+      }
+    }
+
+    function handleNextAttemptLocal(){
+      if (state.attempt < MAX_ATTEMPTS) {
+        state.attempt++;
+        resetAttemptUI();
+      }
+    }
+
+    function renderHistory(){
+      const list = $('historyList');
+      $('historyCount').textContent = `${state.history.length} percobaan`;
+      if (!state.history.length) {
+        list.innerHTML = `<li style="text-align:center; color:var(--muted); font-size:0.85rem; padding:12px;">Belum ada tebakan.</li>`;
+        return;
+      }
+      list.innerHTML = '';
+      state.history.forEach(h => {
+        const li = document.createElement('li');
+        li.className = 'history-item ' + (h.isMatch ? 'match' : 'miss');
+        li.innerHTML = `
+          <span class="history-num">#${h.attempt}</span>
+          <span class="history-words">${h.word1} + ${h.word2}</span>
+          <span class="history-badge">${h.isMatch ? '💖 MATCH' : '❌ Beda'}</span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function showCategoryScreen(){
+      $('playScreen').classList.add('hidden');
+      $('catScreen').classList.remove('hidden');
+      if (state.isHost) {
+        $('hostPickArea').classList.remove('hidden');
+        $('guestWaitingArea').classList.add('hidden');
+      } else {
+        $('hostPickArea').classList.add('hidden');
+        $('guestWaitingArea').classList.remove('hidden');
+      }
+    }
+
+    $('btnChangeCat').onclick = () => {
+      send({ type: 'change_category' });
+      showCategoryScreen();
+    };
+
+    // Room Host/Join Handlers (with STUN/TURN PeerJS)
+    $('btnCreate').onclick = () => {
+      state.myName = $('myName').value.trim() || 'Player1';
+      state.isHost = true;
+      if (state.peer) try { state.peer.destroy(); } catch(_){}
+      const code = generateCode();
+      state.roomCode = code;
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(code, pConfig);
+      net.bindPeerEvents(state.peer);
+      state.peer.on('open', id => {
+        state.roomCode = id;
+        $('roomCode').value = id;
+        $('roomBox').classList.remove('hidden');
+        $('joinBox').classList.add('hidden');
+        setStatus('Room siap! Bagikan kode ke pasangan.', 'ok');
+      });
+      state.peer.on('connection', conn => setupConn(conn));
+      state.peer.on('error', err => {
+        if (err.type === 'unavailable-id') setTimeout(() => $('btnCreate').click(), 400);
+        else setStatus('Error: ' + (err.type || err), 'err');
+      });
+    };
+
+    $('btnJoinShow').onclick = () => {
+      $('joinBox').classList.remove('hidden');
+      $('roomBox').classList.add('hidden');
+    };
+
+    $('btnJoin').onclick = () => {
+      const code = $('joinCode').value.trim().toUpperCase();
+      if (!code) return alert('Masukkan room code');
+      state.myName = $('myName').value.trim() || 'Player2';
+      state.isHost = false;
+      state.roomCode = code;
+      if (state.peer) try { state.peer.destroy(); } catch(_){}
+      const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+      state.peer = new Peer(pConfig);
+      net.bindPeerEvents(state.peer);
+      state.peer.on('open', () => {
+        const conn = state.peer.connect(code, { reliable: true });
+        setupConn(conn);
+        $('roomBox').classList.remove('hidden');
+        $('roomCode').value = code;
+        setStatus('Menghubungkan ke room ' + code + '...', 'info');
+      });
+      state.peer.on('error', err => setStatus('Gagal: ' + (err.type || err), 'err'));
+    };
+
+    $('btnCopy').onclick = () => {
+      navigator.clipboard.writeText($('roomCode').value).then(() => setStatus('Kode room dicopy!', 'ok'));
+    };
+
+    // Check if session exists to resume game if refreshed
+    CoupleNet.checkResume('same-words', sess => {
+      $('myName').value = sess.myName || 'Player1';
+      state.myName = sess.myName || 'Player1';
+      state.roomCode = sess.roomCode;
+      if (sess.isHost) {
+        state.isHost = true;
+        if (state.peer) try { state.peer.destroy(); } catch(_){}
+        const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+        state.peer = new Peer(sess.roomCode, pConfig);
+        net.bindPeerEvents(state.peer);
+        state.peer.on('open', id => {
+          $('roomCode').value = id;
+          $('roomBox').classList.remove('hidden');
+          $('joinBox').classList.add('hidden');
+          setStatus('Room dipulihkan. Menunggu pasangan bergabung...', 'ok');
+        });
+        state.peer.on('connection', conn => setupConn(conn));
+      } else {
+        state.isHost = false;
+        $('joinCode').value = sess.roomCode;
+        $('btnJoin').click();
+      }
+    });
+  </script>
+</body>
+</html>
+

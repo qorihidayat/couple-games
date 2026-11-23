@@ -216,9 +216,41 @@
       return p;
     }
 
+    const net = CoupleNet.bind({
+      gameKey: 'truth-or-dare',
+      getState: () => state,
+      onSetupConn: setupConn,
+      onSyncSend: () => ({
+        level: state.level,
+        turnIsMe: state.turnIsMe,
+        lastType: state.lastType,
+        lastPrompt: state.lastPrompt,
+        inGame: !$('game').classList.contains('hidden')
+      }),
+      onSyncReceive: (snapshot) => {
+        if (!snapshot) return;
+        state.level = snapshot.level || state.level;
+        document.querySelectorAll('.level-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.level === state.level);
+        });
+        if (snapshot.turnIsMe !== undefined) {
+          state.turnIsMe = !snapshot.turnIsMe;
+        }
+        if (snapshot.lastPrompt) {
+          showPrompt(snapshot.lastType, snapshot.lastPrompt, state.turnIsMe ? state.myName : state.partnerName);
+        }
+        if (snapshot.inGame) {
+          $('lobby').classList.add('hidden');
+          $('game').classList.remove('hidden');
+          updatePlayersUI();
+        }
+      }
+    });
+
     function setupConn(conn) {
       state.conn = conn;
       conn.on('open', () => {
+        net.handleConnectionOpen(conn);
         state.connected = true;
         setStatus('Terhubung!', 'ok');
         send({ type: 'hello', name: state.myName });
@@ -227,6 +259,7 @@
         updatePlayersUI();
       });
       conn.on('data', data => {
+        if (net.filterData(data, conn)) return;
         if (data.type === 'hello') {
           state.partnerName = data.name;
           setStatus(data.name + ' bergabung!', 'ok');
@@ -251,11 +284,13 @@
         }
       });
       conn.on('close', () => {
+        net.triggerDisconnect();
         state.connected = false;
         setStatus('Koneksi terputus', 'err');
         updatePlayersUI();
       });
       conn.on('error', err => {
+        net.triggerDisconnect();
         state.connected = false;
         setStatus('Koneksi terganggu: ' + (err.type || err), 'err');
         updatePlayersUI();
@@ -304,9 +339,12 @@
       state.turnIsMe = true;
       if (state.peer) try { state.peer.destroy(); } catch(_){}
       const code = generateCode();
+      state.roomCode = code;
       const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
       state.peer = new Peer(code, pConfig);
+      net.bindPeerEvents(state.peer);
       state.peer.on('open', id => {
+        state.roomCode = id;
         $('roomCode').value = id;
         $('roomBox').classList.remove('hidden');
         $('joinBox').classList.add('hidden');
@@ -330,9 +368,11 @@
       state.myName = $('myName').value.trim() || 'Player2';
       state.isHost = false;
       state.turnIsMe = false;
+      state.roomCode = code;
       if (state.peer) try { state.peer.destroy(); } catch(_){}
       const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
       state.peer = new Peer(pConfig);
+      net.bindPeerEvents(state.peer);
       state.peer.on('open', () => {
         const conn = state.peer.connect(code, { reliable: true });
         setupConn(conn);
@@ -346,6 +386,31 @@
     $('btnCopy').onclick = () => {
       navigator.clipboard.writeText($('roomCode').value).then(() => setStatus('Code dicopy!', 'ok'));
     };
+
+    CoupleNet.checkResume('truth-or-dare', sess => {
+      $('myName').value = sess.myName || 'Player1';
+      state.myName = sess.myName || 'Player1';
+      state.roomCode = sess.roomCode;
+      if (sess.isHost) {
+        state.isHost = true;
+        state.turnIsMe = true;
+        if (state.peer) try { state.peer.destroy(); } catch(_){}
+        const pConfig = typeof getPeerConfig === 'function' ? getPeerConfig() : (window.PEER_CONFIG || { debug: 1 });
+        state.peer = new Peer(sess.roomCode, pConfig);
+        net.bindPeerEvents(state.peer);
+        state.peer.on('open', id => {
+          $('roomCode').value = id;
+          $('roomBox').classList.remove('hidden');
+          $('joinBox').classList.add('hidden');
+          setStatus('Room dipulihkan. Menunggu pasangan...', 'ok');
+        });
+        state.peer.on('connection', c => setupConn(c));
+      } else {
+        state.isHost = false;
+        $('joinCode').value = sess.roomCode;
+        $('btnJoin').click();
+      }
+    });
   </script>
 </body>
 </html>
