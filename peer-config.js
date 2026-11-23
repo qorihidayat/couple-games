@@ -1,12 +1,10 @@
 // WebRTC ICE Configuration for PeerJS (STUN & TURN Servers)
 // Memungkinkan koneksi Peer-to-Peer bekerja di jaringan berbeda (LDR / beda WiFi / kuota data seluler).
 
-// PENGATURAN TURN SERVER RESMI (GRATIS 50GB/BULAN DARI METERED.CA):
-// Jika ingin HP dengan kartu XL/Telkomsel bisa menjadi Room Master (Host),
-// daftar akun gratis di https://www.metered.ca lalu isi 2 kolom di bawah ini:
+// PENGATURAN TURN SERVER RESMI (GRATIS DARI METERED.CA)
 window.METERED_CONFIG = {
-  appName: 'akacracked.metered.live', // Contoh: 'couple-games' (jika domain di metered adalah couple-games.metered.live)
-  apiKey: 'dacd6cea4c901f101d93b19197326b0e6861'   // Contoh: 'a1b2c3d4e5...' (API Key dari dashboard Metered)
+  domain: 'akacracked.metered.live',
+  apiKey: 'dacd6cea4c901f101d93b19197326b0e6861'
 };
 
 window.PEER_CONFIG = {
@@ -14,34 +12,59 @@ window.PEER_CONFIG = {
   pingInterval: 5000, // Menjaga WebSocket tetap hidup di jaringan seluler/mobile
   config: {
     iceServers: [
-      // STUN servers publik Google & Twilio (cepat & stabil untuk deteksi IP publik)
+      // STUN servers publik Google & Twilio
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
-      { urls: 'stun:stun.relay.metered.ca:80' }
+      { urls: 'stun:stun.relay.metered.ca:80' },
+
+      // TURN Relay Servers dari Metered.ca (Menembus NAT ketat XL / Telkomsel / LDR)
+      {
+        urls: 'turn:global.relay.metered.ca:80',
+        username: '742a51b7342c372904d0868e',
+        credential: '/NQXyq/7wj3mfQme'
+      },
+      {
+        urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+        username: '742a51b7342c372904d0868e',
+        credential: '/NQXyq/7wj3mfQme'
+      },
+      {
+        urls: 'turn:global.relay.metered.ca:443',
+        username: '742a51b7342c372904d0868e',
+        credential: '/NQXyq/7wj3mfQme'
+      },
+      {
+        urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+        username: '742a51b7342c372904d0868e',
+        credential: '/NQXyq/7wj3mfQme'
+      }
     ]
   }
 };
 
-// Fungsi pembantu jika user memasukkan API Key Metered
+// Auto-refresh kredensial TURN dari API Metered secara dinamis
 (async function initMeteredTurn() {
-  if (window.METERED_CONFIG && window.METERED_CONFIG.appName && window.METERED_CONFIG.apiKey) {
-    try {
-      const url = `https://${window.METERED_CONFIG.appName}.metered.live/api/v1/turn/credentials?apiKey=${window.METERED_CONFIG.apiKey}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const ice = await res.json();
-        if (Array.isArray(ice) && ice.length) {
-          window.PEER_CONFIG.config.iceServers = ice;
-          console.log('[CoupleNet] Berhasil memuat TURN servers resmi dari Metered.ca!', ice.length, 'servers.');
-        }
+  const cfg = window.METERED_CONFIG;
+  if (!cfg || !cfg.apiKey) return;
+  const rawHost = (cfg.domain || cfg.appName || 'akacracked').trim();
+  const host = rawHost.endsWith('.metered.live') ? rawHost : `${rawHost}.metered.live`;
+  const url = `https://${host}/api/v1/turn/credentials?apiKey=${cfg.apiKey}`;
+
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const ice = await res.json();
+      if (Array.isArray(ice) && ice.length) {
+        window.PEER_CONFIG.config.iceServers = [
+          { urls: 'stun:stun.l.google.com:19302' },
+          ...ice
+        ];
+        console.log('[CoupleNet] TURN Metered aktif & diperbarui:', ice.length, 'servers.');
       }
-    } catch (err) {
-      console.warn('[CoupleNet] Gagal memuat Metered TURN:', err);
     }
+  } catch (err) {
+    console.warn('[CoupleNet] Gagal refresh TURN API Metered, menggunakan server default:', err);
   }
 })();
 
