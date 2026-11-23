@@ -360,8 +360,9 @@
       partnerWord: '',
       myLocked: false,
       partnerLocked: false,
+      evaluated: false,
       roundOver: false,
-      history: [] // array of { attempt, word1, word2, isMatch, p1, p2 }
+      history: [] // array of { attempt, word1, word2, isMatch, myName, partnerName }
     };
 
     const $ = id => document.getElementById(id);
@@ -492,14 +493,20 @@
         }
         else if (data.type === 'guess_locked') {
           // Partner locked their word
+          if (data.attempt && data.attempt !== state.attempt) {
+            console.warn(`[same-words] Received guess for attempt ${data.attempt}, current is ${state.attempt}`);
+          }
           state.partnerLocked = true;
           state.partnerWord = data.word;
           updateLockUI();
           checkBothLocked();
         }
         else if (data.type === 'next_attempt') {
-          // Proceed to next attempt
-          handleNextAttemptLocal();
+          // Proceed to next attempt synchronously
+          const target = data.targetAttempt || (state.attempt + 1);
+          if (target > state.attempt && target <= MAX_ATTEMPTS) {
+            goToAttempt(target, false);
+          }
         }
         else if (data.type === 'change_category') {
           // Return to category selection
@@ -536,6 +543,7 @@
       state.attempt = 1;
       state.history = [];
       state.roundOver = false;
+      state.evaluated = false;
 
       $('catScreen').classList.add('hidden');
       $('playScreen').classList.remove('hidden');
@@ -553,6 +561,7 @@
       state.partnerWord = '';
       state.myLocked = false;
       state.partnerLocked = false;
+      state.evaluated = false;
 
       $('attemptCounterText').textContent = `${state.attempt} / ${MAX_ATTEMPTS}`;
       renderDots();
@@ -591,6 +600,13 @@
       }
     }
 
+    // Enter key to lock word
+    $('myWordInput').onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        $('btnLockWord').click();
+      }
+    };
+
     // Lock Word Action
     $('btnLockWord').onclick = () => {
       const word = $('myWordInput').value.trim();
@@ -611,8 +627,8 @@
       $('lockStatus').className = 'status info';
       $('lockStatus').textContent = `Kata "${word}" terkunci! Menunggu ${state.partnerName} mengunci kata...`;
 
-      // Send locked word to partner
-      send({ type: 'guess_locked', word: word });
+      // Send locked word to partner with attempt number
+      send({ type: 'guess_locked', word: word, attempt: state.attempt });
 
       checkBothLocked();
     };
@@ -638,19 +654,25 @@
     }
 
     function evaluateAttempt(){
+      if (state.evaluated) return;
+      state.evaluated = true;
+
       const wMine = state.myWord.trim();
       const wPartner = state.partnerWord.trim();
       const isMatch = cleanWord(wMine) === cleanWord(wPartner);
 
-      // Record to history
-      state.history.push({
-        attempt: state.attempt,
-        word1: wMine,
-        word2: wPartner,
-        isMatch: isMatch,
-        myName: state.myName,
-        partnerName: state.partnerName
-      });
+      // Record to history (avoid duplicates and keep order consistent)
+      const existing = state.history.find(h => h.attempt === state.attempt);
+      if (!existing) {
+        state.history.push({
+          attempt: state.attempt,
+          word1: state.isHost ? wMine : wPartner,
+          word2: state.isHost ? wPartner : wMine,
+          isMatch: isMatch,
+          p1: state.isHost ? state.myName : state.partnerName,
+          p2: state.isHost ? state.partnerName : state.myName
+        });
+      }
 
       renderDots();
       renderHistory();
@@ -697,6 +719,7 @@
 
         if (state.attempt < MAX_ATTEMPTS) {
           const sisa = MAX_ATTEMPTS - state.attempt;
+          const nextTarget = state.attempt + 1;
           $('resultMsg').innerHTML = `
             Hasilnya <strong>"${wMine} + ${wPartner}"</strong>.<br>
             Masih ada <strong>${sisa} kesempatan lagi</strong>. Coba selaraskan pikiran kalian!
@@ -704,10 +727,11 @@
 
           const btnNext = document.createElement('button');
           btnNext.className = 'btn btn-primary btn-block';
-          btnNext.textContent = `Lanjut Percobaan Ke-${state.attempt + 1} 🔄`;
+          btnNext.textContent = `Lanjut Percobaan Ke-${nextTarget} 🔄`;
           btnNext.onclick = () => {
-            send({ type: 'next_attempt' });
-            handleNextAttemptLocal();
+            btnNext.disabled = true;
+            btnNext.textContent = 'Menyiapkan ronde berikutnya...';
+            goToAttempt(nextTarget, true);
           };
           actionRow.appendChild(btnNext);
 
@@ -743,11 +767,15 @@
       }
     }
 
-    function handleNextAttemptLocal(){
-      if (state.attempt < MAX_ATTEMPTS) {
-        state.attempt++;
-        resetAttemptUI();
+    // Advance to next attempt synchronously & idempotently
+    function goToAttempt(targetAttempt, broadcast = true){
+      if (!targetAttempt || targetAttempt <= state.attempt || targetAttempt > MAX_ATTEMPTS) return;
+      state.attempt = targetAttempt;
+      state.evaluated = false;
+      if (broadcast) {
+        send({ type: 'next_attempt', targetAttempt: targetAttempt });
       }
+      resetAttemptUI();
     }
 
     function renderHistory(){
