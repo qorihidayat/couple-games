@@ -3,6 +3,7 @@
 
 window.PEER_CONFIG = {
   debug: 1,
+  pingInterval: 5000, // Menjaga WebSocket tetap hidup di jaringan seluler/mobile
   config: {
     iceServers: [
       // STUN servers publik Google & Twilio
@@ -12,26 +13,28 @@ window.PEER_CONFIG = {
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
+      { urls: 'stun:openrelay.metered.ca:80' },
 
       // TURN servers gratis (Open Relay by Metered)
+      // Username yang benar adalah 'openrelayproject' (bukan @gmail.com)
       {
         urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject@gmail.com',
+        username: 'openrelayproject',
         credential: 'openrelayproject'
       },
       {
         urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject@gmail.com',
+        username: 'openrelayproject',
         credential: 'openrelayproject'
       },
       {
         urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject@gmail.com',
+        username: 'openrelayproject',
         credential: 'openrelayproject'
       },
       {
         urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject@gmail.com',
+        username: 'openrelayproject',
         credential: 'openrelayproject'
       }
     ]
@@ -97,6 +100,56 @@ function getPeerConfig(overrides) {
       try {
         sessionStorage.removeItem('couple_session_' + gameKey);
       } catch (e) {}
+    },
+
+    // Resilient Guest Join with automatic re-attempts (handles mobile Host switching apps/tab)
+    joinRoom(options) {
+      const { peer, roomCode, setupConn, setStatus, onConnected } = options;
+      setStatus(`Menghubungkan ke room ${roomCode}...`, 'info');
+
+      let attempts = 0;
+      let activeConn = null;
+      let isConnected = false;
+      let timer = null;
+
+      function tryConnect() {
+        if (!peer || peer.destroyed || isConnected) return;
+        attempts++;
+
+        if (activeConn) {
+          try { activeConn.close(); } catch (e) {}
+        }
+
+        activeConn = peer.connect(roomCode, { reliable: true });
+
+        activeConn.on('open', () => {
+          isConnected = true;
+          if (timer) clearInterval(timer);
+          if (typeof onConnected === 'function') onConnected(activeConn);
+        });
+
+        setupConn(activeConn);
+
+        if (attempts > 1) {
+          setStatus(`Menghubungkan ke room ${roomCode}... (Mencoba ${attempts}x. Pastikan layar HP Host menyala & tidak diminimize)`, 'info');
+        }
+      }
+
+      tryConnect();
+
+      // Retry every 8s if still connecting (e.g. Host was copying code to WhatsApp and just returned to browser)
+      timer = setInterval(() => {
+        if (!peer || peer.destroyed || isConnected) {
+          clearInterval(timer);
+          return;
+        }
+        if (attempts < 6) {
+          tryConnect();
+        } else {
+          clearInterval(timer);
+          setStatus(`Belum tersambung ke room ${roomCode}. Pastikan kode benar dan web di HP Host sedang dibuka.`, 'warn');
+        }
+      }, 8000);
     },
 
     // Check if previous session exists on page load and ask to resume
@@ -318,6 +371,29 @@ function getPeerConfig(overrides) {
         console.log('[CoupleNet] Network went offline.');
         triggerDisconnect();
       });
+
+      // Crucial for Mobile / HP: Reconnect signaling when browser tab becomes active again
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          console.log('[CoupleNet] Tab visible again, verifying Peer connection...');
+          const state = getState();
+          if (state.peer && state.peer.disconnected && !state.peer.destroyed) {
+            console.log('[CoupleNet] Reconnecting Peer signaling server...');
+            try { state.peer.reconnect(); } catch (e) {}
+          }
+          if (!state.connected && (state.roomCode || state.roomId)) {
+            triggerReconnect(true);
+          }
+        }
+      });
+
+      // Keep signaling connection alive on mobile networks every 15s
+      setInterval(() => {
+        const state = getState();
+        if (state.peer && state.peer.disconnected && !state.peer.destroyed) {
+          try { state.peer.reconnect(); } catch (e) {}
+        }
+      }, 15000);
 
       // Hook called when a connection opens successfully
       function handleConnectionOpen(conn) {

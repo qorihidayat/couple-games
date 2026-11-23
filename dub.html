@@ -983,6 +983,7 @@
     });
 
     function setupPeerHandlers(conn) {
+      state.conn = conn;
       conn.on('data', data => {
         if (net.filterData(data, conn)) return;
         if (data.type === 'take') {
@@ -1083,11 +1084,14 @@
       state.peer = new Peer(pConfig);
       net.bindPeerEvents(state.peer);
       state.peer.on('open', () => {
-        state.conn = state.peer.connect(code, { reliable: true });
-        setupPeerHandlers(state.conn);
         $('roomInfo').classList.remove('hidden');
         $('roomCodeDisplay').value = code;
-        setStatus($('roomStatus'), 'Menghubungkan ke ' + code + '...', 'info');
+        CoupleNet.joinRoom({
+          peer: state.peer,
+          roomCode: code,
+          setupConn: setupPeerHandlers,
+          setStatus: msg => setStatus($('roomStatus'), msg, 'info')
+        });
       });
       state.peer.on('error', err => {
         console.error(err);

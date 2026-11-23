@@ -374,11 +374,14 @@
       state.peer = new Peer(pConfig);
       net.bindPeerEvents(state.peer);
       state.peer.on('open', () => {
-        const conn = state.peer.connect(code, { reliable: true });
-        setupConn(conn);
         $('roomBox').classList.remove('hidden');
         $('roomCode').value = code;
-        setStatus('Menghubungkan...', 'info');
+        CoupleNet.joinRoom({
+          peer: state.peer,
+          roomCode: code,
+          setupConn: setupConn,
+          setStatus: setStatus
+        });
       });
       state.peer.on('error', err => setStatus('Gagal: ' + (err.type || err), 'err'));
     };
