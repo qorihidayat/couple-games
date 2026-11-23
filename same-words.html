@@ -492,9 +492,10 @@
           startNewGame(false);
         }
         else if (data.type === 'guess_locked') {
-          // Partner locked their word
+          // Partner locked their word — discard if from wrong attempt
           if (data.attempt && data.attempt !== state.attempt) {
-            console.warn(`[same-words] Received guess for attempt ${data.attempt}, current is ${state.attempt}`);
+            console.warn(`[same-words] Stale guess_locked for attempt ${data.attempt}, ignoring.`);
+            return;
           }
           state.partnerLocked = true;
           state.partnerWord = data.word;
@@ -502,10 +503,12 @@
           checkBothLocked();
         }
         else if (data.type === 'next_attempt') {
-          // Proceed to next attempt synchronously
-          const target = data.targetAttempt || (state.attempt + 1);
-          if (target > state.attempt && target <= MAX_ATTEMPTS) {
-            goToAttempt(target, false);
+          // Only received by Guest — advance to the target attempt
+          const target = data.targetAttempt;
+          if (target && target > state.attempt && target <= MAX_ATTEMPTS) {
+            state.attempt = target;
+            state.evaluated = false;
+            resetAttemptUI();
           }
         }
         else if (data.type === 'change_category') {
@@ -725,15 +728,29 @@
             Masih ada <strong>${sisa} kesempatan lagi</strong>. Coba selaraskan pikiran kalian!
           `;
 
-          const btnNext = document.createElement('button');
-          btnNext.className = 'btn btn-primary btn-block';
-          btnNext.textContent = `Lanjut Percobaan Ke-${nextTarget} 🔄`;
-          btnNext.onclick = () => {
-            btnNext.disabled = true;
-            btnNext.textContent = 'Menyiapkan ronde berikutnya...';
-            goToAttempt(nextTarget, true);
-          };
-          actionRow.appendChild(btnNext);
+          if (state.isHost) {
+            // Hanya Host yang bisa menekan Lanjut, Guest menunggu
+            const btnNext = document.createElement('button');
+            btnNext.className = 'btn btn-primary btn-block';
+            btnNext.textContent = `Lanjut Percobaan Ke-${nextTarget} 🔄`;
+            btnNext.onclick = () => {
+              btnNext.disabled = true;
+              btnNext.textContent = 'Menyiapkan ronde berikutnya...';
+              // Directly advance both sides with an exact target
+              state.attempt = nextTarget;
+              state.evaluated = false;
+              send({ type: 'next_attempt', targetAttempt: nextTarget });
+              resetAttemptUI();
+            };
+            actionRow.appendChild(btnNext);
+          } else {
+            // Guest: show waiting message, Host will advance
+            const waitDiv = document.createElement('div');
+            waitDiv.className = 'status info';
+            waitDiv.style.marginTop = '10px';
+            waitDiv.textContent = 'Menunggu host melanjutkan ke percobaan berikutnya...';
+            actionRow.appendChild(waitDiv);
+          }
 
         } else {
           // Attempts exhausted (10/10)
