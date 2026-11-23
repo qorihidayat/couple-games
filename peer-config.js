@@ -7,49 +7,49 @@ window.METERED_CONFIG = {
   apiKey: 'dacd6cea4c901f101d93b19197326b0e6861'
 };
 
+// === ICE CONFIG ===
+// Default: hanya STUN (cepat untuk koneksi langsung / WiFi ke WiFi)
+// TURN akan ditambahkan secara async oleh initMeteredTurn() di bawah
+// iceTransportPolicy: 'all' berarti browser coba direct dulu, baru relay
 window.PEER_CONFIG = {
   debug: 1,
   pingInterval: 5000, // Menjaga WebSocket tetap hidup di jaringan seluler/mobile
   config: {
+    iceTransportPolicy: 'all', // 'all' = coba P2P langsung dulu, relay hanya jika perlu
     iceServers: [
-      // STUN servers publik Google & Twilio
+      // STUN Google — untuk koneksi langsung (WiFi-WiFi), sangat cepat
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' },
-      { urls: 'stun:stun.relay.metered.ca:80' },
-
-      // TURN Relay Servers dari Metered.ca (Menembus NAT ketat XL / Telkomsel / LDR)
-      {
-        urls: 'turn:global.relay.metered.ca:80',
-        username: '742a51b7342c372904d0868e',
-        credential: '/NQXyq/7wj3mfQme'
-      },
-      {
-        urls: 'turn:global.relay.metered.ca:80?transport=tcp',
-        username: '742a51b7342c372904d0868e',
-        credential: '/NQXyq/7wj3mfQme'
-      },
-      {
-        urls: 'turn:global.relay.metered.ca:443',
-        username: '742a51b7342c372904d0868e',
-        credential: '/NQXyq/7wj3mfQme'
-      },
-      {
-        urls: 'turns:global.relay.metered.ca:443?transport=tcp',
-        username: '742a51b7342c372904d0868e',
-        credential: '/NQXyq/7wj3mfQme'
-      }
+      { urls: 'stun:stun1.l.google.com:19302' }
     ]
   }
 };
 
-// Auto-refresh kredensial TURN dari API Metered secara dinamis
+// Cache kredensial TURN di localStorage agar tidak perlu fetch ulang tiap buka halaman
+// Kredensial Metered biasanya valid 24 jam
 (async function initMeteredTurn() {
   const cfg = window.METERED_CONFIG;
   if (!cfg || !cfg.apiKey) return;
+
+  const CACHE_KEY = 'metered_ice_cache';
+  const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 jam dalam ms
+
+  // Coba ambil dari cache dulu (sangat cepat, tidak perlu network)
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && cached.ts && (Date.now() - cached.ts < CACHE_TTL) && cached.ice && cached.ice.length) {
+      window.PEER_CONFIG.config.iceServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        ...cached.ice
+      ];
+      console.log('[CoupleNet] TURN dari cache lokal (' + cached.ice.length + ' servers). Tidak perlu fetch API.');
+      return;
+    }
+  } catch (_) {}
+
+  // Fetch fresh dari API Metered (hanya jika cache kosong / kadaluarsa)
   const rawHost = (cfg.domain || cfg.appName || 'akacracked').trim();
-  const host = rawHost.endsWith('.metered.live') ? rawHost : `${rawHost}.metered.live`;
-  const url = `https://${host}/api/v1/turn/credentials?apiKey=${cfg.apiKey}`;
+  const host = rawHost.endsWith('.metered.live') ? rawHost : rawHost + '.metered.live';
+  const url = 'https://' + host + '/api/v1/turn/credentials?apiKey=' + cfg.apiKey;
 
   try {
     const res = await fetch(url);
@@ -60,13 +60,23 @@ window.PEER_CONFIG = {
           { urls: 'stun:stun.l.google.com:19302' },
           ...ice
         ];
-        console.log('[CoupleNet] TURN Metered aktif & diperbarui:', ice.length, 'servers.');
+        // Simpan ke cache
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), ice: ice }));
+        } catch (_) {}
+        console.log('[CoupleNet] TURN Metered diperbarui dari API:', ice.length, 'servers.');
       }
     }
   } catch (err) {
-    console.warn('[CoupleNet] Gagal refresh TURN API Metered, menggunakan server default:', err);
+    // Fallback: tetap gunakan STUN saja jika gagal fetch (koneksi WiFi-WiFi tetap jalan)
+    console.warn('[CoupleNet] Gagal fetch TURN API, hanya pakai STUN:', err.message);
   }
 })();
+
+function getPeerConfig(overrides) {
+  if (!overrides) return window.PEER_CONFIG;
+  return Object.assign({}, window.PEER_CONFIG, overrides);
+}
 
 function getPeerConfig(overrides) {
   if (!overrides) return window.PEER_CONFIG;
