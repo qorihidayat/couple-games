@@ -1,45 +1,49 @@
 // WebRTC ICE Configuration for PeerJS (STUN & TURN Servers)
 // Memungkinkan koneksi Peer-to-Peer bekerja di jaringan berbeda (LDR / beda WiFi / kuota data seluler).
 
+// PENGATURAN TURN SERVER RESMI (GRATIS 50GB/BULAN DARI METERED.CA):
+// Jika ingin HP dengan kartu XL/Telkomsel bisa menjadi Room Master (Host),
+// daftar akun gratis di https://www.metered.ca lalu isi 2 kolom di bawah ini:
+window.METERED_CONFIG = {
+  appName: 'akacracked.metered.live', // Contoh: 'couple-games' (jika domain di metered adalah couple-games.metered.live)
+  apiKey: 'dacd6cea4c901f101d93b19197326b0e6861'   // Contoh: 'a1b2c3d4e5...' (API Key dari dashboard Metered)
+};
+
 window.PEER_CONFIG = {
   debug: 1,
   pingInterval: 5000, // Menjaga WebSocket tetap hidup di jaringan seluler/mobile
   config: {
     iceServers: [
-      // STUN servers publik Google & Twilio
+      // STUN servers publik Google & Twilio (cepat & stabil untuk deteksi IP publik)
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
-      { urls: 'stun:openrelay.metered.ca:80' },
-
-      // TURN servers gratis (Open Relay by Metered)
-      // Username yang benar adalah 'openrelayproject' (bukan @gmail.com)
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      }
+      { urls: 'stun:stun.relay.metered.ca:80' }
     ]
   }
 };
+
+// Fungsi pembantu jika user memasukkan API Key Metered
+(async function initMeteredTurn() {
+  if (window.METERED_CONFIG && window.METERED_CONFIG.appName && window.METERED_CONFIG.apiKey) {
+    try {
+      const url = `https://${window.METERED_CONFIG.appName}.metered.live/api/v1/turn/credentials?apiKey=${window.METERED_CONFIG.apiKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const ice = await res.json();
+        if (Array.isArray(ice) && ice.length) {
+          window.PEER_CONFIG.config.iceServers = ice;
+          console.log('[CoupleNet] Berhasil memuat TURN servers resmi dari Metered.ca!', ice.length, 'servers.');
+        }
+      }
+    } catch (err) {
+      console.warn('[CoupleNet] Gagal memuat Metered TURN:', err);
+    }
+  }
+})();
 
 function getPeerConfig(overrides) {
   if (!overrides) return window.PEER_CONFIG;
